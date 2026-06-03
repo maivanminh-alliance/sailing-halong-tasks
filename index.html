@@ -428,7 +428,7 @@ async function saveTask() {
       const r = await fetch(WA_URL, { method:'POST', body:JSON.stringify({action, task, token: SECRET_TOKEN}) });
       const j = await r.json();
       toast(j.ok ? (editId?'Đã cập nhật!':`Đã giao việc & gửi email đến ${person}!`) : 'Lỗi: '+(j.error||''), j.ok?'ok':'err');
-    } catch(e) { toast('Đã lưu offline. Chưa kết nối Apps Script.', ''); }
+    } catch(e) { toast('Lỗi kết nối: ' + e.message, 'err'); }
   } else {
     toast(editId?'Đã cập nhật (offline)':'Đã thêm việc. Cần kết nối Apps Script để gửi email tự động.', '');
   }
