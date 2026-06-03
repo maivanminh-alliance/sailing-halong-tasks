@@ -340,8 +340,7 @@ async function runAction(action, loadingText, btn) {
   try {
     const r = await fetch(WA_URL, {
       method: 'POST',
-      body: JSON.stringify({ action, token: SECRET_TOKEN }),
-      headers: { 'Content-Type': 'application/json' }
+      body: JSON.stringify({ action, token: SECRET_TOKEN })
     });
     const j = await r.json();
     toast(j.ok ? '✓ ' + j.message : '✗ Lỗi: ' + (j.error||''), j.ok ? 'ok' : 'err');
@@ -426,7 +425,7 @@ async function saveTask() {
   if (WA_URL) {
     try {
       const action = editId !== null ? 'updateTask' : 'addTask';
-      const r = await fetch(WA_URL, { method:'POST', body:JSON.stringify({action, task, token: SECRET_TOKEN}), headers:{'Content-Type':'application/json'} });
+      const r = await fetch(WA_URL, { method:'POST', body:JSON.stringify({action, task, token: SECRET_TOKEN}) });
       const j = await r.json();
       toast(j.ok ? (editId?'Đã cập nhật!':`Đã giao việc & gửi email đến ${person}!`) : 'Lỗi: '+(j.error||''), j.ok?'ok':'err');
     } catch(e) { toast('Đã lưu offline. Chưa kết nối Apps Script.', ''); }
