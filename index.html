@@ -218,7 +218,7 @@
       <th style="width:28px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
       <th>Công việc</th><th>Người phụ trách</th><th>Hạng mục</th>
       <th>Ưu tiên</th><th>Deadline</th><th>Trạng thái</th>
-      <th>Tiến độ</th><th>Vướng mắc</th><th>Thao tác</th>
+      <th>Tiến độ</th><th>Vướng mắc</th><th>Tài liệu</th><th>Thao tác</th>
     </tr></thead>
     <tbody id="tableBody"></tbody>
   </table>
@@ -492,7 +492,7 @@ function getFiltered() {
 function render() {
   const filtered = getFiltered(); renderStats();
   const body = document.getElementById('tableBody');
-  if (!filtered.length) { body.innerHTML='<tr><td colspan="10"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
+  if (!filtered.length) { body.innerHTML='<tr><td colspan="11"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
   if (viewMode==='person') renderByPerson(filtered, body);
   else renderFlat(filtered, body);
 }
@@ -506,7 +506,7 @@ function renderByPerson(filtered, body) {
   const keys = MEMBERS.filter(m => grouped[m]).concat(Object.keys(grouped).filter(k=>!MEMBERS.includes(k)));
   body.innerHTML = keys.map(p => {
     const pts=grouped[p]; const done=pts.filter(t=>t.status==='Hoàn thành').length;
-    return `<tr class="person-header"><td colspan="10">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}</td></tr>`+pts.map(t=>taskRow(t)).join('');
+    return `<tr class="person-header"><td colspan="11">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}</td></tr>`+pts.map(t=>taskRow(t)).join('');
   }).join('');
 }
 
@@ -540,6 +540,7 @@ function taskRow(t) {
     <td>${stBadge}</td>
     <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${p}%;background:${pc}"></div></div><div class="progress-label">${p}%</div></div></td>
     <td style="max-width:140px;font-size:11px;color:#c27803">${t.issue?`⚠ ${esc(t.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
+    <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td><div class="actions">
       <button class="btn btn-outline btn-sm" onclick="openModal('${t.id}')">✏</button>
       <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}')">✕</button>
