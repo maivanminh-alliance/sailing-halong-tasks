@@ -715,7 +715,8 @@ async function saveTask() {
         saveTasks();
         render();
       }
-      toast(j.ok ? (editId?'Đã cập nhật!':`Đã giao việc & gửi email đến ${person}!`) : 'Lỗi: '+(j.error||''), j.ok?'ok':'err');
+      const okMsg = j.message || (editId ? 'Đã cập nhật!' : `Đã giao việc & gửi email đến ${person}!`);
+      toast(j.ok ? okMsg : 'Lỗi: '+(j.error||''), j.ok ? (j.warning ? 'err' : 'ok') : 'err');
     } catch(e) { toast('Lỗi kết nối: ' + e.message, 'err'); }
   } else {
     toast(editId?'Đã cập nhật (offline)':'Đã thêm việc. Cần kết nối Apps Script để gửi email tự động.', '');
