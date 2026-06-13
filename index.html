@@ -169,6 +169,7 @@
     <button id="btnList" class="btn" onclick="setView('list')" style="padding:6px 12px;font-size:13px;">📋 Danh sách</button>
     <button id="btnPerson" class="btn" onclick="setView('person')" style="padding:6px 12px;font-size:13px;">👤 Theo thành viên</button>
   </div>
+  <button class="btn btn-outline" onclick="openEval()" style="border-color:#7c3aed;color:#6d28d9;">📊 Đánh giá tháng</button>
 </div>
 
 <!-- SEARCH + FILTERS -->
@@ -264,6 +265,27 @@
   </div>
 </div>
 
+<!-- MODAL THÔNG TIN CÔNG VIỆC (kiểu email giao việc) -->
+<div class="modal-overlay" id="infoOverlay" onclick="if(event.target.id==='infoOverlay')closeInfo()">
+  <div class="modal" style="max-width:640px;">
+    <div id="infoBody"></div>
+  </div>
+</div>
+
+<!-- MODAL ĐÁNH GIÁ THÁNG -->
+<div class="modal-overlay" id="evalOverlay" onclick="if(event.target.id==='evalOverlay')closeEval()">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-header">
+      <div class="modal-title">📊 Đánh giá hoàn thành công việc theo tháng</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="month" id="evalMonth" onchange="renderEval()" style="border:1.5px solid var(--gray-300);border-radius:8px;padding:6px 10px;font-size:13px;">
+        <button class="modal-close" onclick="closeEval()">×</button>
+      </div>
+    </div>
+    <div class="modal-body" id="evalBody"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -356,18 +378,19 @@ async function loadFromSheet() {
     const j   = JSON.parse(txt.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, ''));
     const cols = j.table.cols.map(c => c.label);
     const get  = (row, lbl) => { const i=cols.indexOf(lbl); return (i>=0&&row.c[i]) ? (row.c[i].v??'') : ''; };
+    const parseGvizDate = (v) => {
+      if (!v) return '';
+      if (typeof v==='string'&&v.startsWith('Date(')) { const m=v.match(/Date\((\d+),(\d+),(\d+)/); return m?`${m[1]}-${pad(+m[2]+1)}-${pad(+m[3])}`:''; }
+      if (v instanceof Date) return v.toISOString().split('T')[0];
+      return String(v);
+    };
     const parsed = j.table.rows.filter(r => r.c && r.c[1] && r.c[1].v).map((r,idx) => {
-      const dl = get(r,'Deadline'); let dlS='';
-      if (dl) {
-        if (typeof dl==='string'&&dl.startsWith('Date(')) { const m=dl.match(/Date\((\d+),(\d+),(\d+)\)/); if(m) dlS=`${m[1]}-${pad(+m[2]+1)}-${pad(+m[3])}`; }
-        else if (dl instanceof Date) dlS=dl.toISOString().split('T')[0];
-        else dlS=String(dl);
-      }
       return { id:get(r,'ID')||(idx+1), name:get(r,'Tên công việc'), person:get(r,'Người phụ trách'),
         category:get(r,'Nội dung'), priority:get(r,'Ưu tiên')||'Trung bình',
-        deadline:dlS, status:get(r,'Trạng thái')||'Chưa làm',
+        deadline:parseGvizDate(get(r,'Deadline')), status:get(r,'Trạng thái')||'Chưa làm',
         progress:parseInt(get(r,'Tiến độ (%)'))||0,
-        note:get(r,'Ghi chú'), issue:get(r,'Vướng mắc'), doc:get(r,'Tài liệu') };
+        note:get(r,'Ghi chú'), issue:get(r,'Vướng mắc'), doc:get(r,'Tài liệu'),
+        result:get(r,'Kết quả / Báo cáo'), doneDate:parseGvizDate(get(r,'Ngày hoàn thành')) };
     });
     if (parsed.length) { tasks = parsed; saveTasks(); }
     render(); setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
@@ -525,6 +548,7 @@ function taskRow(t) {
     <td style="max-width:140px;font-size:11px;color:#c27803">${t.issue?`⚠ ${esc(t.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td><div class="actions">
+      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Xem thông tin chi tiết" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
       <button class="btn btn-outline btn-sm" onclick="openModal('${t.id}')">✏</button>
       <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}')">✕</button>
     </div></td>
@@ -572,6 +596,158 @@ function exportCSV() {
   a.download=`giao-viec-${todayStr()}.csv`; a.click();
 }
 
+// ── LOGIC ĐÁNH GIÁ TRƯỚC HẠN / ĐÚNG HẠN / TRỄ HẠN ────────────
+// Quy tắc: so sánh NGÀY HOÀN THÀNH với DEADLINE.
+// Việc đã hoàn thành nhưng xong SAU deadline → vẫn tính TRỄ HẠN + số ngày trễ.
+// Việc chưa hoàn thành và đã qua deadline → ĐANG QUÁ HẠN + số ngày quá.
+function perfOf(t) {
+  const td = todayStr();
+  if (!t.deadline) return { key:'none', days:0, label:'Không có deadline', color:'#6b7280', bg:'#f3f4f6' };
+  if (t.status === 'Hoàn thành') {
+    const done = (t.doneDate || '').slice(0,10);
+    if (!done) return { key:'doneNoDate', days:0, label:'Hoàn thành (chưa ghi nhận ngày xong)', color:'#374151', bg:'#f3f4f6' };
+    const diff = Math.round((new Date(done) - new Date(t.deadline)) / 86400000);
+    if (diff < 0)   return { key:'early',  days:-diff, label:`✓ Hoàn thành TRƯỚC HẠN ${-diff} ngày`, color:'#065f46', bg:'#d1fae5' };
+    if (diff === 0) return { key:'ontime', days:0,     label:'✓ Hoàn thành ĐÚNG HẠN',               color:'#1e40af', bg:'#dbeafe' };
+    return { key:'late', days:diff, label:`⚠ Hoàn thành TRỄ HẠN ${diff} ngày`, color:'#991b1b', bg:'#fee2e2' };
+  }
+  const diff = Math.round((new Date(td) - new Date(t.deadline)) / 86400000);
+  if (diff > 0)   return { key:'overdue', days:diff, label:`⚠ ĐANG QUÁ HẠN ${diff} ngày (chưa hoàn thành)`, color:'#991b1b', bg:'#fee2e2' };
+  if (diff === 0) return { key:'today', days:0, label:'Deadline HÔM NAY', color:'#92400e', bg:'#fef3c7' };
+  return { key:'pending', days:-diff, label:`Còn ${-diff} ngày đến deadline`, color:'#374151', bg:'#f3f4f6' };
+}
+
+// ── MODAL THÔNG TIN CHI TIẾT (kiểu email giao việc) ──────────
+function openInfo(id) {
+  const t = tasks.find(x => String(x.id) === String(id)); if (!t) return;
+  const pf = perfOf(t);
+  const uColor = t.priority==='Cao'?'#dc2626':t.priority==='Trung bình'?'#d97706':'#16a34a';
+  const sIcon = {'Chưa làm':'○','Đang làm':'◑','Hoàn thành':'✓'};
+  const row = (label, value, bg) => value ? `<tr${bg?' style="background:#f9fafb;"':''}>
+    <td style="padding:10px 14px;font-weight:600;width:36%;border:1px solid #e5e7eb;vertical-align:top;">${label}</td>
+    <td style="padding:10px 14px;border:1px solid #e5e7eb;word-break:break-word;">${value}</td></tr>` : '';
+  document.getElementById('infoBody').innerHTML = `
+    <div style="background:#1a56db;padding:18px 20px;border-radius:12px 12px 0 0;position:relative;">
+      <button class="modal-close" onclick="closeInfo()" style="position:absolute;top:12px;right:12px;color:white;">×</button>
+      <h2 style="color:white;margin:0;font-size:17px;">Nội dung công việc được giao</h2>
+      <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px;">Sailing Hạ Long · Ban chỉ huy công trình</p>
+    </div>
+    <div style="padding:22px;">
+      <p style="margin:0 0 14px;">Xin chào <strong style="color:#dc2626;">${esc(t.person||'')}</strong>,</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        ${row('Tên công việc', `<strong>${esc(t.name)}</strong>`, true)}
+        ${row('Nội dung', esc(t.category||''))}
+        ${row('Ưu tiên', `<span style="background:${uColor}20;color:${uColor};padding:2px 10px;border-radius:12px;font-weight:700;">${esc(t.priority||'')}</span>`, true)}
+        ${row('Deadline', t.deadline?`<span style="color:#dc2626;font-weight:600;">${fmtVN(t.deadline)}</span>`:'')}
+        ${row('Trạng thái', `${sIcon[t.status]||''} ${esc(t.status||'')} · Tiến độ <strong>${parseInt(t.progress)||0}%</strong>`, true)}
+        ${row('Ngày hoàn thành', t.doneDate?fmtVN((t.doneDate||'').slice(0,10)):'')}
+        ${row('Đánh giá', `<span style="background:${pf.bg};color:${pf.color};padding:3px 10px;border-radius:12px;font-weight:700;">${pf.label}</span>`, true)}
+        ${row('Ghi chú', esc(t.note||''))}
+        ${row('Vướng mắc', t.issue?`<span style="color:#c27803;">⚠ ${esc(t.issue)}</span>`:'', true)}
+        ${row('Kết quả / Báo cáo', esc(t.result||''))}
+        ${row('Tài liệu', t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu tại đây</a>`:'', true)}
+      </table>
+      <div style="text-align:right;margin-top:18px;">
+        <button class="btn btn-outline" onclick="closeInfo();openModal('${t.id}')">✏ Chỉnh sửa</button>
+        <button class="btn btn-primary" onclick="closeInfo()">Đóng</button>
+      </div>
+    </div>`;
+  document.getElementById('infoOverlay').classList.add('open');
+}
+function closeInfo() { document.getElementById('infoOverlay').classList.remove('open'); }
+
+// ── ĐÁNH GIÁ THEO THÁNG ──────────────────────────────────────
+function openEval() {
+  const inp = document.getElementById('evalMonth');
+  if (!inp.value) inp.value = todayStr().slice(0,7);
+  renderEval();
+  document.getElementById('evalOverlay').classList.add('open');
+}
+function closeEval() { document.getElementById('evalOverlay').classList.remove('open'); }
+
+function renderEval() {
+  const m = document.getElementById('evalMonth').value;
+  const body = document.getElementById('evalBody');
+  const list = tasks.filter(t => t.deadline && t.deadline.startsWith(m));
+  if (!list.length) { body.innerHTML = `<div class="empty">Không có công việc nào có deadline trong tháng ${m.split('-')[1]}/${m.split('-')[0]}</div>`; return; }
+
+  const byPerson = {};
+  list.forEach(t => { (byPerson[t.person] = byPerson[t.person]||[]).push(t); });
+  const keys = MEMBERS.filter(p=>byPerson[p]).concat(Object.keys(byPerson).filter(k=>!MEMBERS.includes(k)));
+
+  const num = (v,c) => v ? `<strong style="color:${c};">${v}</strong>` : '<span style="color:var(--gray-300)">0</span>';
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <tr style="background:var(--gray-50);">
+      <th style="padding:8px 10px;text-align:left;border:1px solid #e5e7eb;">Thành viên</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;">Tổng</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;color:#065f46;">Trước hạn</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;color:#1e40af;">Đúng hạn</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;color:#991b1b;">Trễ hạn</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;color:#991b1b;">Đang quá hạn</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;color:#6b7280;">Chưa đến hạn</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;">Tỷ lệ đạt</th>
+      <th style="padding:8px 10px;border:1px solid #e5e7eb;">Xếp loại</th>
+    </tr>`;
+  let details = '';
+
+  keys.forEach(p => {
+    const pts = byPerson[p];
+    const c = { early:0, ontime:0, late:0, overdue:0, pending:0, lateDays:0, overDays:0 };
+    pts.forEach(t => {
+      const pf = perfOf(t);
+      if (pf.key==='early') c.early++;
+      else if (pf.key==='ontime' || pf.key==='doneNoDate') c.ontime++;
+      else if (pf.key==='late') { c.late++; c.lateDays += pf.days; }
+      else if (pf.key==='overdue') { c.overdue++; c.overDays += pf.days; }
+      else c.pending++;
+    });
+    const judged = c.early + c.ontime + c.late + c.overdue;   // việc đã có thể đánh giá
+    const rate = judged ? Math.round((c.early + c.ontime) / judged * 100) : null;
+    let grade = '–', gColor = '#6b7280', gBg = '#f3f4f6';
+    if (rate !== null) {
+      if (rate >= 80)      { grade='Tốt';          gColor='#065f46'; gBg='#d1fae5'; }
+      else if (rate >= 60) { grade='Khá';          gColor='#92400e'; gBg='#fef3c7'; }
+      else                 { grade='Cần cải thiện';gColor='#991b1b'; gBg='#fee2e2'; }
+    }
+    html += `<tr>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;"><span class="role-tag">${esc(p)}</span></td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;">${pts.length}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;">${num(c.early,'#065f46')}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;">${num(c.ontime,'#1e40af')}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;">${num(c.late,'#991b1b')}${c.late?`<br><small style="color:#991b1b;">tổng trễ ${c.lateDays}d</small>`:''}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;">${num(c.overdue,'#991b1b')}${c.overdue?`<br><small style="color:#991b1b;">quá ${c.overDays}d</small>`:''}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;">${num(c.pending,'#6b7280')}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;font-weight:700;">${rate===null?'–':rate+'%'}</td>
+      <td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:center;"><span style="background:${gBg};color:${gColor};padding:2px 10px;border-radius:12px;font-weight:700;font-size:12px;">${grade}</span></td>
+    </tr>`;
+
+    details += `<details style="border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;">
+      <summary style="cursor:pointer;font-weight:600;">${esc(p)} – ${pts.length} việc</summary>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;">
+        <tr style="background:var(--gray-50);">
+          <th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Công việc</th>
+          <th style="padding:6px 8px;border:1px solid #e5e7eb;">Deadline</th>
+          <th style="padding:6px 8px;border:1px solid #e5e7eb;">Ngày xong</th>
+          <th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Đánh giá</th>
+        </tr>
+        ${pts.map(t => { const pf = perfOf(t); return `<tr>
+          <td style="padding:6px 8px;border:1px solid #e5e7eb;"><a href="javascript:void(0)" onclick="closeEval();openInfo('${t.id}')" style="color:var(--primary);text-decoration:none;">${esc(t.name)}</a></td>
+          <td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:center;white-space:nowrap;">${fmtVN(t.deadline)}</td>
+          <td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:center;white-space:nowrap;">${t.doneDate?fmtVN((t.doneDate||'').slice(0,10)):'–'}</td>
+          <td style="padding:6px 8px;border:1px solid #e5e7eb;"><span style="background:${pf.bg};color:${pf.color};padding:1px 8px;border-radius:10px;font-weight:600;">${pf.label}</span></td>
+        </tr>`; }).join('')}
+      </table>
+    </details>`;
+  });
+  html += '</table>';
+
+  body.innerHTML = `
+    <div style="font-size:12px;color:var(--gray-500);">Tính theo các công việc có <strong>deadline trong tháng ${m.split('-')[1]}/${m.split('-')[0]}</strong>. Việc hoàn thành sau deadline vẫn tính TRỄ HẠN kèm số ngày trễ. Tỷ lệ đạt = (trước hạn + đúng hạn) / việc đã đến hạn.</div>
+    ${html}
+    <div style="font-weight:700;margin-top:4px;">Chi tiết từng thành viên</div>
+    ${details}`;
+}
+
 // ── HELPERS ──────────────────────────────────────────────────
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function fmtVN(s) { if(!s) return ''; const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
@@ -585,7 +761,7 @@ function toast(msg, type='') {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') closeModal();
+  if (e.key==='Escape') { closeModal(); closeInfo(); closeEval(); }
   if (e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('open') && e.target.tagName!=='TEXTAREA') { e.preventDefault(); saveTask(); }
 });
 </script>
