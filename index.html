@@ -249,7 +249,7 @@
   <table>
     <thead><tr>
       <th style="width:28px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
-      <th>Công việc</th><th>Người phụ trách</th><th>Hạng mục</th>
+      <th>Công việc</th><th>Người phụ trách</th><th style="min-width:100px;">Nhận TT</th><th>Hạng mục</th>
       <th>Ưu tiên</th><th>Deadline</th><th>Trạng thái</th>
       <th>Tiến độ</th><th>Vướng mắc</th><th>Tài liệu</th><th>Thao tác</th>
     </tr></thead>
@@ -271,6 +271,23 @@
     </div>
     <div class="modal-body">
       <div class="field-group"><label class="field-label">Tên công việc *</label><input type="text" id="f_name" placeholder="Nhập tên công việc..."></div>
+
+      <!-- TASK CON TRONG MODAL -->
+      <div class="field-group" style="background:#faf5ff;border:1.5px solid #c4b5fd;border-radius:8px;padding:10px 12px;">
+        <label class="field-label" style="color:#7c3aed;margin-bottom:6px;">Tasks con <span style="font-size:10px;font-weight:400;color:#6b7280;">(tùy chọn – thêm trước khi lưu)</span></label>
+        <div id="modalSubtaskList" style="margin-bottom:6px;"></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="mStName" placeholder="Tên task con..." onkeydown="if(event.key==='Enter'){event.preventDefault();_modalAddSt();}"
+            style="flex:1;min-width:140px;font-size:12px;padding:5px 8px;border:1.5px solid #c4b5fd;border-radius:6px;outline:none;background:white;">
+          <input type="date" id="mStDeadline"
+            style="font-size:12px;padding:5px 8px;border:1.5px solid var(--gray-300);border-radius:6px;outline:none;background:white;width:140px;">
+          <button type="button" onclick="_modalAddSt()"
+            style="padding:5px 12px;background:#7c3aed;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+            ＋ Thêm
+          </button>
+        </div>
+      </div>
+
       <div class="field-row">
         <div class="field-group"><label class="field-label">Người phụ trách *</label>
           <select id="f_person">
@@ -543,6 +560,7 @@ async function saveTask() {
     doc:      document.getElementById('f_doc').value.trim(),
     doneDate,
     ccMembers: getCcSelected(),
+    subtasks: _modalSubtasks,
   };
 
   setBtnLoading(true);
@@ -597,6 +615,11 @@ function openModal(id) {
   document.getElementById('f_doneDate').value = t?.doneDate ? (t.doneDate||'').slice(0,10) : '';
   autoFillDoneDate();
   renderCcMembers(t?.ccMembers || []);
+  // Reset/populate modal subtasks
+  _modalSubtasks = t ? JSON.parse(JSON.stringify(t.subtasks || [])) : [];
+  _renderModalSubtasks();
+  document.getElementById('mStName').value = '';
+  document.getElementById('mStDeadline').value = '';
   document.getElementById('modalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('f_name').focus(), 80);
 }
@@ -634,7 +657,7 @@ function getFiltered() {
 function render() {
   const filtered = getFiltered(); renderStats();
   const body = document.getElementById('tableBody');
-  if (!filtered.length) { body.innerHTML='<tr><td colspan="11"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
+  if (!filtered.length) { body.innerHTML='<tr><td colspan="12"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
   if (viewMode==='person') renderByPerson(filtered, body);
   else renderFlat(filtered, body);
 }
@@ -686,6 +709,7 @@ function _subtaskRows(t) {
       </td>
       <td style="font-size:11px;color:#6b7280;white-space:nowrap;">${esc(t.person||'')}</td>
       <td></td>
+      <td></td>
       <td style="white-space:nowrap;">${dlHtml}</td>
       <td><span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;
         color:${isDone?'#065f46':isOD?'#dc2626':'#5b21b6'};
@@ -705,7 +729,7 @@ function _subtaskRows(t) {
 function _quickAddStRow(taskId) {
   return `<tr style="background:#f0e6ff;border-left:3px solid #7c3aed;">
     <td></td>
-    <td colspan="7" style="padding:7px 8px 7px 30px;">
+    <td colspan="8" style="padding:7px 8px 7px 30px;">
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:13px;color:#a78bfa;">└</span>
         <span style="font-size:10px;font-weight:800;color:#8b5cf6;min-width:22px;">+</span>
@@ -744,7 +768,7 @@ function renderByPerson(filtered, body) {
     const stTotal=pts.reduce((s,t)=>(s+(t.subtasks||[]).length),0);
     const stDone=pts.reduce((s,t)=>(s+(t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length),0);
     const stInfo = stTotal ? ` &nbsp;·&nbsp; 📌 Tasks con: ${stDone}/${stTotal}` : '';
-    return `<tr class="person-header"><td colspan="11">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
+    return `<tr class="person-header"><td colspan="12">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
       + pts.map(t => {
         const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t) : '';
         const addRow = _addingStTo===t.id ? _quickAddStRow(t.id) : '';
@@ -806,6 +830,7 @@ function taskRow(t) {
       ${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}
     </td>
     <td><span class="role-tag">${esc(t.person||'')}</span></td>
+    <td style="font-size:11px;max-width:110px;">${(t.ccMembers&&t.ccMembers.length)?t.ccMembers.map(m=>`<span style="display:inline-block;padding:1px 5px;background:#e0f2fe;color:#0369a1;border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;margin:1px;">${esc(m.split(' ').slice(-2).join(' '))}</span>`).join(''):'<span style="color:var(--gray-300)">–</span>'}</td>
     <td style="font-size:12px;color:var(--gray-500)">${esc(t.category||'')}</td>
     <td><span class="badge badge-${uMap[t.priority]||'trung'}">${t.priority||''}</span></td>
     <td style="white-space:nowrap;font-size:13px">${dlHtml}</td>
@@ -1347,6 +1372,41 @@ document.addEventListener('click', () => {
   const p = document.getElementById('ccDropPanel');
   if (p) p.classList.remove('open');
 });
+
+// ── MODAL SUBTASKS ───────────────────────────────────────────
+let _modalSubtasks = [];
+
+function _renderModalSubtasks() {
+  const list = document.getElementById('modalSubtaskList');
+  if (!list) return;
+  if (!_modalSubtasks.length) { list.innerHTML = ''; return; }
+  list.innerHTML = _modalSubtasks.map((s, i) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:white;border:1px solid #c4b5fd;border-radius:6px;margin-bottom:4px;">
+      <span style="font-size:10px;font-weight:800;color:#7c3aed;min-width:18px;">${i+1}</span>
+      <span style="font-size:12px;font-weight:500;flex:1;color:#1f2937;">${esc(s.name)}</span>
+      ${s.deadline?`<span style="font-size:10px;color:#6b7280;background:#f5f3ff;padding:1px 7px;border-radius:8px;border:1px solid #ddd6fe;">${fmtVN(s.deadline)}</span>`:''}
+      <span style="font-size:10px;color:${s.status==='Hoàn thành'?'#059669':'#6b7280'};font-weight:600;">${s.status==='Hoàn thành'?'✓':''}</span>
+      <button type="button" onclick="_modalDelSt(${i})"
+        style="padding:1px 6px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;font-size:11px;cursor:pointer;">✕</button>
+    </div>`).join('');
+}
+
+function _modalAddSt() {
+  const name = (document.getElementById('mStName')||{}).value?.trim();
+  if (!name) { document.getElementById('mStName')?.focus(); return; }
+  const deadline = (document.getElementById('mStDeadline')||{}).value || '';
+  _modalSubtasks.push({ id:'st_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    name, deadline, status:'Chưa làm', note:'', doneDate:'', createdAt:fmtVN(todayStr()) });
+  document.getElementById('mStName').value = '';
+  document.getElementById('mStDeadline').value = '';
+  _renderModalSubtasks();
+  document.getElementById('mStName')?.focus();
+}
+
+function _modalDelSt(idx) {
+  _modalSubtasks.splice(idx, 1);
+  _renderModalSubtasks();
+}
 
 // ── INFO MODAL WITH TABS ─────────────────────────────────────
 let _infoTaskId = null;
