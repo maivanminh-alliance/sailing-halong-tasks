@@ -86,6 +86,32 @@
   /* Spinner */
   .spin { display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:white; border-radius:50%; animation:spin .7s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
+  /* Info tabs */
+  .info-tabs{display:flex;border-bottom:2px solid var(--gray-200);margin-bottom:0;padding:0;}
+  .info-tab{padding:10px 15px;cursor:pointer;font-size:13px;font-weight:500;color:var(--gray-500);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+  .info-tab:hover{color:var(--primary);}
+  .info-tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:700;}
+  /* Sub-tasks */
+  .st-row{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:6px;margin-bottom:6px;background:white;}
+  .st-row.done{background:#f0fdf4;border-color:#a7f3d0;}
+  .st-row.done .st-name{text-decoration:line-through;color:var(--gray-500);}
+  .st-check{width:16px;height:16px;cursor:pointer;flex-shrink:0;margin-top:2px;}
+  .st-name{font-size:13px;font-weight:500;}
+  .st-meta{font-size:11px;color:var(--gray-500);margin-top:2px;}
+  /* CC members */
+  .cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;max-height:120px;overflow-y:auto;border:1.5px solid var(--gray-300);border-radius:8px;padding:6px;background:white;}
+  .cc-row{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;}
+  .cc-row:hover{background:var(--gray-50);}
+  .cc-chip{display:inline-flex;align-items:center;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin:2px;}
+  /* Deadline requests */
+  .dl-req-card{border:1px solid var(--gray-200);border-radius:8px;padding:11px 13px;margin-bottom:8px;}
+  .dl-req-card.pending{border-color:#f59e0b;background:#fffbeb;}
+  .dl-req-card.approved{border-color:#10b981;background:#f0fdf4;}
+  .dl-req-card.rejected{border-color:#ef4444;background:#fef2f2;}
+  .dl-badge{padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;}
+  .dl-badge.pending{background:#fef3c7;color:#92400e;}
+  .dl-badge.approved{background:#d1fae5;color:#065f46;}
+  .dl-badge.rejected{background:#fee2e2;color:#991b1b;}
   @media(max-width:700px) { .field-row { grid-template-columns:1fr; } }
 </style>
 </head>
@@ -255,6 +281,16 @@
         <label class="field-label">Ngày hoàn thành</label>
         <input type="date" id="f_doneDate">
       </div>
+      <div class="field-group">
+        <label class="field-label" style="cursor:pointer;display:flex;justify-content:space-between;" onclick="document.getElementById('ccCollapse').classList.toggle('hidden')">
+          <span>👥 Người nhận thông tin</span>
+          <span style="font-size:11px;color:var(--gray-500);">Cc thêm ngoài PC &amp; PM ▾</span>
+        </label>
+        <div id="ccCollapse">
+          <div class="cc-grid" id="ccGrid"></div>
+          <div id="ccSelected" style="margin-top:5px;min-height:18px;"></div>
+        </div>
+      </div>
       <div class="field-group"><label class="field-label">Ghi chú / Nội dung</label><textarea id="f_note" placeholder="Mô tả công việc..."></textarea></div>
       <div class="field-group"><label class="field-label">Vướng mắc</label><textarea id="f_issue" placeholder="Vấn đề cần báo cáo..." style="min-height:50px"></textarea></div>
       <div class="field-group"><label class="field-label">Tài liệu / Link</label><input type="text" id="f_doc" placeholder="https://..."></div>
@@ -273,6 +309,18 @@
 <div class="modal-overlay" id="infoOverlay" onclick="if(event.target.id==='infoOverlay')closeInfo()">
   <div class="modal" style="max-width:640px;">
     <div id="infoBody"></div>
+  </div>
+</div>
+
+<!-- MODAL PHÊ DUYỆT DỜI DEADLINE -->
+<div class="modal-overlay" id="dlRevOverlay" onclick="if(event.target.id==='dlRevOverlay')closeDlRev()">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <div class="modal-title" id="dlRevTitle">Phê duyệt dời deadline</div>
+      <button class="modal-close" onclick="closeDlRev()">×</button>
+    </div>
+    <div class="modal-body" id="dlRevBody"></div>
+    <div class="modal-footer" id="dlRevFooter"></div>
   </div>
 </div>
 
@@ -431,6 +479,7 @@ async function saveTask() {
     issue:    document.getElementById('f_issue').value.trim(),
     doc:      document.getElementById('f_doc').value.trim(),
     doneDate,
+    ccMembers: getCcSelected(),
   };
 
   setBtnLoading(true);
@@ -484,6 +533,7 @@ function openModal(id) {
   document.getElementById('f_doc').value      = t?.doc      || '';
   document.getElementById('f_doneDate').value = t?.doneDate ? (t.doneDate||'').slice(0,10) : '';
   autoFillDoneDate();
+  renderCcMembers(t?.ccMembers || []);
   document.getElementById('modalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('f_name').focus(), 80);
 }
@@ -544,6 +594,9 @@ function taskRow(t) {
   const uMap={'Cao':'cao','Trung bình':'trung','Thấp':'thap'};
   const sMap={'Chưa làm':'chua','Đang làm':'dang','Hoàn thành':'xong'};
   const sIcon={'Chưa làm':'○','Đang làm':'◑','Hoàn thành':'✓'};
+  const stDone=(t.subtasks||[]).filter(s=>s.status==='Hoàn thành').length, stTotal=(t.subtasks||[]).length;
+  const stBadgeBtn = stTotal ? `📌 ${stDone}/${stTotal}` : '📌';
+  const dlrPending = (t.dlRequests||[]).some(r=>r.status==='pending');
   const p=Math.max(0,Math.min(100,parseInt(t.progress)||0));
   const pc=p===100?'#059669':p>60?'#3b82f6':p>30?'#f59e0b':'#ef4444';
   let dlHtml='<span style="color:var(--gray-300)">–</span>';
@@ -561,7 +614,7 @@ function taskRow(t) {
     :`<span class="badge badge-${sMap[t.status]||'chua'}">${sIcon[t.status]||''} ${t.status}</span>`;
   return `<tr>
     <td><input type="checkbox" class="row-check" data-id="${t.id}"></td>
-    <td><div class="task-name">${esc(t.name)}</div>${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}</td>
+    <td><div class="task-name">${esc(t.name)}${stTotal?`<span style="font-size:11px;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:5px;">📌 ${stDone}/${stTotal}</span>`:''}${dlrPending?`<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:5px;">⏳ Chờ duyệt dời hạn</span>`:''}</div>${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}</td>
     <td><span class="role-tag">${esc(t.person||'')}</span></td>
     <td style="font-size:12px;color:var(--gray-500)">${esc(t.category||'')}</td>
     <td><span class="badge badge-${uMap[t.priority]||'trung'}">${t.priority||''}</span></td>
@@ -571,7 +624,8 @@ function taskRow(t) {
     <td style="max-width:140px;font-size:11px;color:#c27803">${t.issue?`⚠ ${esc(t.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td><div class="actions">
-      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Xem thông tin chi tiết" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
+      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Chi tiết / Tasks con / Dời deadline" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
+      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}','subtasks')" title="Tasks con" style="color:#7c3aed;border-color:#7c3aed;">${stBadgeBtn}</button>
       <button class="btn btn-outline btn-sm" onclick="openModal('${t.id}')">✏</button>
       <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}')">✕</button>
     </div></td>
@@ -617,6 +671,262 @@ function exportCSV() {
   const csv='﻿'+[h.join(','),...rows].join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   a.download=`giao-viec-${todayStr()}.csv`; a.click();
+}
+
+// ── CC MEMBERS ───────────────────────────────────────────────
+function renderCcMembers(selected) {
+  const grid = document.getElementById('ccGrid');
+  if (!grid) return;
+  const currentPerson = document.getElementById('f_person').value;
+  const skip = new Set(['PC - Mr. Minh','PM - Mr. Kiên', currentPerson].filter(Boolean));
+  grid.innerHTML = MEMBERS.filter(m=>!skip.has(m)).map(m=>
+    `<label class="cc-row"><input type="checkbox" value="${esc(m)}" ${selected.includes(m)?'checked':''}> ${esc(m)}</label>`
+  ).join('');
+  grid.querySelectorAll('input').forEach(cb=>cb.addEventListener('change', _updateCcSelected));
+  _updateCcSelected();
+}
+
+function _updateCcSelected() {
+  const sel = getCcSelected();
+  const el = document.getElementById('ccSelected');
+  if (!el) return;
+  el.innerHTML = sel.length
+    ? sel.map(m=>`<span class="cc-chip">${esc(m)}</span>`).join('')
+    : '<span style="font-size:11px;color:var(--gray-500);">PC & PM luôn được Cc mặc định</span>';
+}
+
+function getCcSelected() {
+  return [...document.querySelectorAll('#ccGrid input:checked')].map(cb=>cb.value);
+}
+
+// ── INFO MODAL WITH TABS ─────────────────────────────────────
+let _infoTaskId = null;
+
+function openInfo(id, tab) {
+  const t = tasks.find(x=>String(x.id)===String(id));
+  if (!t) return;
+  _infoTaskId = String(id);
+  _renderInfoModal(t, tab||'detail');
+  document.getElementById('infoOverlay').classList.add('open');
+}
+
+function closeInfo() {
+  document.getElementById('infoOverlay').classList.remove('open');
+  _infoTaskId = null;
+}
+
+function _renderInfoModal(t, tab) {
+  if (!t) return;
+  const stCount = (t.subtasks||[]).length;
+  const dlrPend = (t.dlRequests||[]).some(r=>r.status==='pending');
+  const tabs = [
+    {id:'detail',   label:'📋 Chi tiết'},
+    {id:'subtasks', label:`📌 Tasks con${stCount?' ('+stCount+')':''}`},
+    {id:'dlreq',    label:`📅 Dời deadline${dlrPend?' ⚠':''}`},
+  ];
+  const tabHtml = tabs.map(tb=>
+    `<button class="info-tab${tab===tb.id?' active':''}" onclick="_switchInfoTab('${tb.id}')">${tb.label}</button>`
+  ).join('');
+  let content = tab==='detail' ? _infoDetail(t) : tab==='subtasks' ? _infoSubtasks(t) : _infoDlReq(t);
+  document.getElementById('infoBody').innerHTML = `
+    <div style="background:#1a56db;padding:15px 20px;border-radius:12px 12px 0 0;position:relative;">
+      <button onclick="closeInfo()" style="position:absolute;top:10px;right:12px;background:none;border:none;cursor:pointer;color:white;font-size:22px;line-height:1;padding:0;">×</button>
+      <h2 style="color:white;margin:0;font-size:16px;padding-right:28px;">${esc(t.name)}</h2>
+      <p style="color:#bfdbfe;margin:4px 0 0;font-size:12px;"><span style="background:rgba(255,255,255,.2);color:white;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;">${esc(t.person||'')}</span> · ${esc(t.category||'')} · Sailing Hạ Long</p>
+    </div>
+    <div style="border-bottom:2px solid var(--gray-200);padding:0 20px;">
+      <div class="info-tabs" style="margin:0 -20px;">${tabHtml}</div>
+    </div>
+    <div style="padding:15px 20px 20px;">${content}</div>`;
+}
+
+function _switchInfoTab(tab) {
+  const t = tasks.find(x=>String(x.id)===_infoTaskId);
+  if (t) _renderInfoModal(t, tab);
+}
+
+function _infoDetail(t) {
+  const pf = perfOf(t);
+  const uColor = t.priority==='Cao'?'#dc2626':t.priority==='Trung bình'?'#d97706':'#16a34a';
+  const sIcon = {'Chưa làm':'○','Đang làm':'◑','Hoàn thành':'✓'};
+  const row = (lbl,val,bg)=>val?`<tr${bg?' style="background:#f9fafb;"':''}>
+    <td style="padding:8px 12px;font-weight:600;width:36%;border:1px solid #e5e7eb;font-size:13px;vertical-align:top;">${lbl}</td>
+    <td style="padding:8px 12px;border:1px solid #e5e7eb;word-break:break-word;font-size:13px;">${val}</td></tr>`:'';
+  const ccChips=(t.ccMembers||[]).map(m=>`<span class="cc-chip">${esc(m)}</span>`).join('')||'<span style="color:var(--gray-300)">–</span>';
+  return `<p style="margin:0 0 12px;">Xin chào <strong style="color:#dc2626;">${esc(t.person||'')}</strong>,</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+      ${row('Tên công việc',`<strong>${esc(t.name)}</strong>`,true)}
+      ${row('Nội dung',esc(t.category||''))}
+      ${row('Ưu tiên',`<span style="background:${uColor}20;color:${uColor};padding:2px 10px;border-radius:12px;font-weight:700;">${esc(t.priority||'')}</span>`,true)}
+      ${row('Deadline',t.deadline?`<span style="color:#dc2626;font-weight:600;">${fmtVN(t.deadline)}</span>`:'')}
+      ${row('Trạng thái',`${sIcon[t.status]||''} ${esc(t.status||'')} · <strong>${parseInt(t.progress)||0}%</strong>`,true)}
+      ${row('Ngày hoàn thành',t.doneDate?fmtVN((t.doneDate||'').slice(0,10)):'')}
+      ${row('Đánh giá',`<span style="background:${pf.bg};color:${pf.color};padding:2px 9px;border-radius:12px;font-weight:700;">${pf.label}</span>`,true)}
+      ${row('Ghi chú',esc(t.note||''))}
+      ${row('Vướng mắc',t.issue?`<span style="color:#c27803;">⚠ ${esc(t.issue)}</span>`:'',true)}
+      ${row('Kết quả',esc(t.result||''))}
+      ${row('Tài liệu',t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu</a>`:'',true)}
+      ${row('Người nhận thông tin',ccChips)}
+    </table>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-outline" onclick="closeInfo();openModal('${t.id}')">✏ Chỉnh sửa</button>
+      <button class="btn btn-primary" onclick="closeInfo()">Đóng</button>
+    </div>`;
+}
+
+function _infoSubtasks(t) {
+  const sts = t.subtasks||[];
+  const done=sts.filter(s=>s.status==='Hoàn thành').length, total=sts.length;
+  const pct=total?Math.round(done/total*100):0;
+  const pc=pct===100?'#059669':pct>60?'#3b82f6':pct>0?'#f59e0b':'#e5e7eb';
+  const stHtml=total?sts.map(s=>`
+    <div class="st-row${s.status==='Hoàn thành'?' done':''}">
+      <input type="checkbox" class="st-check" ${s.status==='Hoàn thành'?'checked':''}
+        onchange="toggleSubtask('${t.id}','${s.id}',this.checked)">
+      <div style="flex:1;min-width:0;">
+        <div class="st-name">${esc(s.name)}</div>
+        <div class="st-meta">${s.doneDate?'✓ Xong: '+fmtVN(s.doneDate):''} ${s.note?'· <span style="color:#c27803;">'+esc(s.note)+'</span>':''} <span style="color:var(--gray-200);margin-left:6px;">Thêm: ${s.createdAt||''}</span></div>
+      </div>
+      <button onclick="delSubtask('${t.id}','${s.id}')" style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:14px;padding:0 4px;flex-shrink:0;">✕</button>
+    </div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--gray-500);">Chưa có task con nào.</div>';
+  const progressHtml=total?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+    <div style="flex:1;background:var(--gray-200);border-radius:4px;height:8px;">
+      <div style="width:${pct}%;height:8px;border-radius:4px;background:${pc};transition:width .3s;"></div>
+    </div><span style="font-size:12px;font-weight:700;color:${pc};white-space:nowrap;">${done}/${total} hoàn thành (${pct}%)</span></div>`:'';
+  return `${progressHtml}<div>${stHtml}</div>
+    <div style="border-top:1px dashed var(--gray-200);margin-top:12px;padding-top:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">＋ Thêm task mới</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <input type="text" id="newStName" placeholder="Tên task..." style="flex:1;min-width:150px;font-size:13px;">
+        <input type="text" id="newStNote" placeholder="Ghi chú..." style="flex:1;min-width:100px;font-size:13px;">
+        <button class="btn btn-primary btn-sm" onclick="addSubtask('${t.id}')">＋ Thêm</button>
+      </div>
+    </div>`;
+}
+
+function _infoDlReq(t) {
+  const reqs=(t.dlRequests||[]).slice().reverse();
+  const reqHtml=reqs.length?reqs.map(r=>`
+    <div class="dl-req-card ${r.status}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span class="dl-badge ${r.status}">${r.status==='pending'?'⏳ Chờ duyệt':r.status==='approved'?'✓ Đã duyệt':'✗ Từ chối'}</span>
+        <span style="font-size:11px;color:var(--gray-500);">Yêu cầu: ${r.requestedAt}</span>
+      </div>
+      <div style="font-size:13px;">${fmtVN(r.currentDeadline)} → <strong style="color:#1a56db;">${fmtVN(r.newDate)}</strong></div>
+      <div style="font-size:12px;color:var(--gray-700);margin-top:3px;">Lý do: ${esc(r.reason)}</div>
+      ${r.reviewNote?`<div style="font-size:12px;margin-top:3px;color:${r.status==='approved'?'#065f46':'#991b1b'};">Phản hồi: ${esc(r.reviewNote)}</div>`:''}
+      ${r.status==='pending'?`<div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-sm" style="background:#d1fae5;color:#065f46;" onclick="openDlReview('${t.id}','${r.id}',true)">✓ Duyệt</button>
+        <button class="btn btn-sm btn-danger" onclick="openDlReview('${t.id}','${r.id}',false)">✗ Từ chối</button>
+      </div>`:''}
+    </div>`).join(''):'<div style="text-align:center;padding:16px;color:var(--gray-500);">Chưa có yêu cầu dời deadline.</div>';
+  return `${reqHtml}
+    <div style="border-top:1px dashed var(--gray-200);margin-top:12px;padding-top:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">📅 Tạo yêu cầu dời deadline mới</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Deadline hiện tại: <strong>${fmtVN(t.deadline)||'Chưa có'}</strong></div>
+      <div class="field-row" style="margin-bottom:8px;">
+        <div class="field-group"><label class="field-label">Deadline mới đề xuất</label>
+          <input type="date" id="dlNewDate" min="${todayStr()}" style="width:100%;font-size:13px;"></div>
+        <div class="field-group"><label class="field-label">Lý do</label>
+          <input type="text" id="dlReason" placeholder="Lý do cần dời..." style="font-size:13px;"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitDlRequest('${t.id}')">📨 Gửi yêu cầu (email PC + PM)</button>
+    </div>`;
+}
+
+// ── SUB-TASKS ────────────────────────────────────────────────
+function addSubtask(taskId) {
+  const name=(document.getElementById('newStName')||{}).value?.trim();
+  if (!name) { toast('Nhập tên task', 'err'); return; }
+  const note=(document.getElementById('newStNote')||{}).value?.trim()||'';
+  const ti=tasks.findIndex(t=>String(t.id)===String(taskId));
+  if (ti<0) return;
+  if (!tasks[ti].subtasks) tasks[ti].subtasks=[];
+  tasks[ti].subtasks.push({ id:String(Date.now()), name, note, status:'Chưa làm', doneDate:'', createdAt:fmtVN(todayStr()) });
+  saveTasks(); render();
+  _renderInfoModal(tasks[ti], 'subtasks');
+  toast('Đã thêm task: '+name, 'ok');
+}
+
+function toggleSubtask(taskId, stId, checked) {
+  const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
+  const si=(tasks[ti].subtasks||[]).findIndex(s=>String(s.id)===String(stId)); if (si<0) return;
+  tasks[ti].subtasks[si].status = checked?'Hoàn thành':'Chưa làm';
+  tasks[ti].subtasks[si].doneDate = checked?todayStr():'';
+  saveTasks(); render();
+  _renderInfoModal(tasks[ti], 'subtasks');
+}
+
+function delSubtask(taskId, stId) {
+  if (!confirm('Xóa task này?')) return;
+  const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
+  tasks[ti].subtasks=(tasks[ti].subtasks||[]).filter(s=>String(s.id)!==String(stId));
+  saveTasks(); render();
+  _renderInfoModal(tasks[ti], 'subtasks');
+}
+
+// ── DEADLINE REQUESTS ────────────────────────────────────────
+function submitDlRequest(taskId) {
+  const newDate=(document.getElementById('dlNewDate')||{}).value;
+  const reason=(document.getElementById('dlReason')||{}).value?.trim();
+  if (!newDate) { toast('Chọn ngày deadline mới', 'err'); return; }
+  if (!reason)  { toast('Nhập lý do', 'err'); return; }
+  const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
+  if (!tasks[ti].dlRequests) tasks[ti].dlRequests=[];
+  const req={ id:String(Date.now()), currentDeadline:tasks[ti].deadline||'', newDate, reason, requestedAt:fmtVN(todayStr()), status:'pending', reviewedAt:'', reviewNote:'' };
+  tasks[ti].dlRequests.push(req);
+  saveTasks(); render();
+  if (WA_URL) {
+    const t=tasks[ti];
+    fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'dlRequest',task:{id:t.id,name:t.name,person:t.person,deadline:t.deadline,newDate,reason},token:SECRET_TOKEN})})
+      .then(r=>r.json()).then(j=>{ if(j.ok) toast('Đã gửi email thông báo yêu cầu dời deadline','ok'); }).catch(()=>{});
+  }
+  toast('Đã lưu yêu cầu dời deadline','ok');
+  _renderInfoModal(tasks[ti], 'dlreq');
+}
+
+let _dlRevCtx=null;
+function openDlReview(taskId, reqId, approved) {
+  _dlRevCtx={taskId, reqId, approved};
+  const t=tasks.find(x=>String(x.id)===String(taskId));
+  const req=(t?.dlRequests||[]).find(r=>String(r.id)===String(reqId));
+  if (!req) return;
+  document.getElementById('dlRevTitle').textContent=approved?'✓ Duyệt dời deadline':'✗ Từ chối dời deadline';
+  document.getElementById('dlRevBody').innerHTML=`
+    <p>Yêu cầu của <strong>${esc(t?.person||'')}</strong>:</p>
+    <p>Deadline: <strong>${fmtVN(req.currentDeadline)}</strong> → <strong style="color:#1a56db;">${fmtVN(req.newDate)}</strong></p>
+    <p style="margin-bottom:12px;">Lý do: ${esc(req.reason)}</p>
+    ${approved?`<p style="color:#065f46;font-weight:600;margin-bottom:12px;">Khi duyệt, deadline sẽ được cập nhật thành <strong>${fmtVN(req.newDate)}</strong>.</p>`:''}
+    <div class="field-group"><label class="field-label">Ghi chú phản hồi (tuỳ chọn)</label>
+      <input type="text" id="dlRevNote" placeholder="Nhập ghi chú..." style="font-size:13px;"></div>`;
+  document.getElementById('dlRevFooter').innerHTML=`
+    <button class="btn btn-outline" onclick="closeDlRev()">Hủy</button>
+    <button class="btn ${approved?'btn-primary':'btn-danger'}" onclick="confirmDlReview()">
+      ${approved?'✓ Xác nhận duyệt':'✗ Xác nhận từ chối'}</button>`;
+  document.getElementById('dlRevOverlay').classList.add('open');
+}
+
+function closeDlRev() { document.getElementById('dlRevOverlay').classList.remove('open'); }
+
+function confirmDlReview() {
+  if (!_dlRevCtx) return;
+  const {taskId, reqId, approved}=_dlRevCtx;
+  const note=(document.getElementById('dlRevNote')||{}).value?.trim()||'';
+  const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
+  const ri=(tasks[ti].dlRequests||[]).findIndex(r=>String(r.id)===String(reqId)); if (ri<0) return;
+  tasks[ti].dlRequests[ri].status=approved?'approved':'rejected';
+  tasks[ti].dlRequests[ri].reviewedAt=fmtVN(todayStr());
+  tasks[ti].dlRequests[ri].reviewNote=note;
+  if (approved) tasks[ti].deadline=tasks[ti].dlRequests[ri].newDate;
+  saveTasks(); render(); closeDlRev();
+  if (WA_URL) {
+    const t=tasks[ti], req=t.dlRequests[ri];
+    fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'dlReview',task:{id:t.id,name:t.name,person:t.person,newDate:req.newDate,approved,note},token:SECRET_TOKEN})})
+      .then(r=>r.json()).catch(()=>{});
+  }
+  toast(approved?'✓ Đã duyệt – deadline: '+fmtVN(tasks[ti].deadline):'✗ Đã từ chối', approved?'ok':'err');
+  _renderInfoModal(tasks[ti], 'dlreq');
+  _dlRevCtx=null;
 }
 
 // ── LOGIC ĐÁNH GIÁ TRƯỚC HẠN / ĐÚNG HẠN / TRỄ HẠN ────────────
@@ -784,7 +1094,7 @@ function toast(msg, type='') {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeModal(); closeInfo(); closeEval(); }
+  if (e.key==='Escape') { closeModal(); closeInfo(); closeDlRev(); closeEval(); }
   if (e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('open') && e.target.tagName!=='TEXTAREA') { e.preventDefault(); saveTask(); }
 });
 </script>
