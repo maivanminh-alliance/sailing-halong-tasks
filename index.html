@@ -211,6 +211,7 @@
     <button id="btnPerson" class="btn" onclick="setView('person')" style="padding:6px 12px;font-size:13px;">👤 Theo thành viên</button>
     <button id="btnDash" class="btn" onclick="setView('dash')" style="padding:6px 12px;font-size:13px;">📈 Hiệu suất</button>
     <button id="btnGantt" class="btn" onclick="setView('gantt')" style="padding:6px 12px;font-size:13px;">🗓 Tiến độ</button>
+    <button id="btnNoticeTree" class="btn" onclick="setView('noticeTree')" style="padding:6px 12px;font-size:13px;">🔔 Lịch sử TB</button>
   </div>
   <button class="btn btn-outline" onclick="openEval()" style="border-color:#7c3aed;color:#6d28d9;">📊 Đánh giá tháng</button>
 </div>
@@ -249,8 +250,8 @@
   <table>
     <thead><tr>
       <th style="width:28px"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
-      <th>Công việc</th><th>Người phụ trách</th><th style="min-width:100px;">Nhận TT</th><th>Hạng mục</th>
-      <th>Ưu tiên</th><th>Deadline</th><th>Trạng thái</th>
+      <th>Công việc</th><th>Người phụ trách</th><th style="min-width:100px;">Người nhận TT</th><th>Hạng mục</th>
+      <th>Ưu tiên</th><th>Deadline</th><th style="min-width:90px;">Ngày xong</th><th>Trạng thái</th>
       <th>Tiến độ</th><th>Vướng mắc</th><th>Tài liệu</th><th>Thao tác</th>
     </tr></thead>
     <tbody id="tableBody"></tbody>
@@ -261,6 +262,8 @@
 <div id="dashView" style="display:none;padding:16px 20px 32px;"></div>
 <!-- GANTT VIEW -->
 <div id="ganttView" style="display:none;padding:16px 20px 32px;"></div>
+<!-- NOTICE TREE VIEW -->
+<div id="noticeTreeView" style="display:none;padding:16px 20px 32px;"></div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
@@ -409,6 +412,17 @@
         </div>
         <div id="noticeRecipSelected" style="margin-top:5px;min-height:22px;display:flex;flex-wrap:wrap;gap:3px;"></div>
       </div>
+      <div class="field-group">
+        <label class="field-label">CC <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(nhận bản sao – mặc định: PM + PC)</span></label>
+        <div class="cc-drop-wrap">
+          <button type="button" id="noticeCcDropBtn" class="cc-drop-btn" onclick="toggleNoticeCcDrop(event)">
+            <span id="noticeCcDropLabel">Chọn người CC...</span>
+            <span style="font-size:10px;color:var(--gray-500);">▼</span>
+          </button>
+          <div id="noticeCcGrid" class="cc-drop-panel"></div>
+        </div>
+        <div id="noticeCcSelected" style="margin-top:5px;min-height:22px;display:flex;flex-wrap:wrap;gap:3px;"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeNotice()">Hủy</button>
@@ -441,6 +455,7 @@ const SHEET_ID  = '12voyw5H5aX0RBipioG7gRBDzZAuD4G3emeEBl7AgA6M';
 const GVIZ_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Giao+Vi%E1%BB%87c`;
 const MEMBERS   = ['PD - Mr. Tuấn Anh','PM - Mr. Kiên','PC - Mr. Minh','SM - Mr. Thế Dũng','SM - Mr. Vũ','SM - Mr. Vương','SM - Mr. Đoàn','SS - Mr. Việt','SS - Mr. Nhơn','SD - Mr. Văn Dũng','SD - Ms. Tiên','SD - Mr. Phú','QSL - Mr. Tỉnh','QSL - Mr. Ngọc','QSM - Mr. Quý','QAQC - Mr. Mạnh','Thư ký - Ms. Trinh'];
 
+const PROJECT_NAME = 'Sailing Hạ Long';
 let WA_URL      = 'https://script.google.com/macros/s/AKfycbxEA4s04h1U623zNy-oMaj7OoUlDphfNw_3rZL9p-ZDJuYk7JR2PU2embYnDJrklIwH-A/exec';
 let tasks       = JSON.parse(localStorage.getItem('bch_tasks_v3') || '[]');
 let editId      = null;
@@ -497,7 +512,7 @@ async function loadFromSheet() {
       const r = await fetch(WA_URL);
       const j = await r.json();
       if (j.ok && j.tasks && j.tasks.length) {
-        tasks = j.tasks; saveTasks(); render();
+        tasks = j.tasks; saveTasks(); _renderAll();
         setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
         toast('Đã tải ' + tasks.length + ' công việc', 'ok'); return;
       }
@@ -527,12 +542,20 @@ async function loadFromSheet() {
         created: parseGvizDate(get(r,'Ngày tạo')) };
     });
     if (parsed.length) { tasks = parsed; saveTasks(); }
-    render(); setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
+    _renderAll(); setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
     toast(tasks.length ? 'Đã tải ' + tasks.length + ' công việc từ Sheet' : 'Sheet chưa có dữ liệu. Hãy thêm công việc đầu tiên!', tasks.length?'ok':'');
   } catch(e) {
-    setStat('Offline'); render();
+    setStat('Offline'); _renderAll();
     if (!tasks.length) toast('Chưa kết nối được. Đảm bảo Sheet được share "Anyone – Viewer"', 'err');
   }
+}
+
+// Render tất cả view đang active (list + dash + gantt nếu cần)
+function _renderAll() {
+  try { render(); } catch(e) { console.error('render error:', e); }
+  if (viewMode === 'dash')       { try { renderDashboard(); }  catch(e) { console.error('renderDashboard error:', e); } }
+  if (viewMode === 'gantt')      { try { renderGantt();     }  catch(e) { console.error('renderGantt error:', e); } }
+  if (viewMode === 'noticeTree') { try { renderNoticeTree(); } catch(e) { console.error('renderNoticeTree error:', e); } }
 }
 
 // ── SAVE TASK → Apps Script → Sheet → Email ──────────────────
@@ -591,9 +614,31 @@ function setBtnLoading(on) {
   document.getElementById('saveBtn').disabled = on;
 }
 
-function deleteTask(id) {
-  if (!confirm('Xóa công việc này?')) return;
-  tasks = tasks.filter(t => String(t.id) !== String(id)); saveTasks(); render();
+async function deleteTask(id) {
+  const t = tasks.find(x => String(x.id) === String(id));
+  if (!t) return;
+  if (!confirm(`Xóa công việc:\n"${t.name}"\n\nCông việc sẽ bị xóa khỏi sheet tổng và sheet cá nhân của ${t.person}. Không thể hoàn tác!`)) return;
+
+  // Xóa khỏi local trước để UI phản hồi ngay
+  tasks = tasks.filter(x => String(x.id) !== String(id));
+  saveTasks(); render();
+
+  // Gọi GAS xóa trên Google Sheet
+  if (!WA_URL) { toast('Đã xóa cục bộ (WA_URL chưa cài)', 'err'); return; }
+  try {
+    const r = await fetch(WA_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteTask', id, token: SECRET_TOKEN })
+    });
+    const j = await r.json();
+    if (j.ok) {
+      toast('✓ Đã xóa khỏi sheet tổng và sheet ' + (t.person || ''), 'ok');
+    } else {
+      toast('Xóa local xong nhưng lỗi GAS: ' + (j.error || '?'), 'err');
+    }
+  } catch(e) {
+    toast('Xóa local xong nhưng không kết nối được GAS', 'err');
+  }
 }
 
 // ── MODAL ────────────────────────────────────────────────────
@@ -657,7 +702,7 @@ function getFiltered() {
 function render() {
   const filtered = getFiltered(); renderStats();
   const body = document.getElementById('tableBody');
-  if (!filtered.length) { body.innerHTML='<tr><td colspan="12"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
+  if (!filtered.length) { body.innerHTML='<tr><td colspan="13"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
   if (viewMode==='person') renderByPerson(filtered, body);
   else renderFlat(filtered, body);
 }
@@ -711,6 +756,7 @@ function _subtaskRows(t) {
       <td></td>
       <td></td>
       <td style="white-space:nowrap;">${dlHtml}</td>
+      <td></td>
       <td><span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;
         color:${isDone?'#065f46':isOD?'#dc2626':'#5b21b6'};
         background:${isDone?'#d1fae5':isOD?'#fee2e2':'#ede9fe'};">
@@ -729,7 +775,7 @@ function _subtaskRows(t) {
 function _quickAddStRow(taskId) {
   return `<tr style="background:#f0e6ff;border-left:3px solid #7c3aed;">
     <td></td>
-    <td colspan="8" style="padding:7px 8px 7px 30px;">
+    <td colspan="9" style="padding:7px 8px 7px 30px;">
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:13px;color:#a78bfa;">└</span>
         <span style="font-size:10px;font-weight:800;color:#8b5cf6;min-width:22px;">+</span>
@@ -768,7 +814,7 @@ function renderByPerson(filtered, body) {
     const stTotal=pts.reduce((s,t)=>(s+(t.subtasks||[]).length),0);
     const stDone=pts.reduce((s,t)=>(s+(t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length),0);
     const stInfo = stTotal ? ` &nbsp;·&nbsp; 📌 Tasks con: ${stDone}/${stTotal}` : '';
-    return `<tr class="person-header"><td colspan="12">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
+    return `<tr class="person-header"><td colspan="13">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
       + pts.map(t => {
         const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t) : '';
         const addRow = _addingStTo===t.id ? _quickAddStRow(t.id) : '';
@@ -822,10 +868,6 @@ function taskRow(t) {
         <span>${esc(t.name)}</span>
         ${stBadge2}
         ${dlrPending?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:600;">⏳ Chờ dời hạn</span>`:''}
-        <button onclick="openQuickAddSt('${t.id}')" title="Thêm task con"
-          style="margin-left:2px;padding:0 6px;height:18px;font-size:11px;font-weight:700;background:${_addingStTo===t.id?'#7c3aed':'#ede9fe'};color:${_addingStTo===t.id?'white':'#7c3aed'};border:1px solid #a78bfa;border-radius:9px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:2px;">
-          ＋ Task con
-        </button>
       </div>
       ${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}
     </td>
@@ -834,6 +876,7 @@ function taskRow(t) {
     <td style="font-size:12px;color:var(--gray-500)">${esc(t.category||'')}</td>
     <td><span class="badge badge-${uMap[t.priority]||'trung'}">${t.priority||''}</span></td>
     <td style="white-space:nowrap;font-size:13px">${dlHtml}</td>
+    <td style="white-space:nowrap;font-size:12px;">${t.doneDate?`<span style="color:#059669;font-weight:600;">${fmtVN((t.doneDate||'').slice(0,10))}</span>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td>${stBadge}</td>
     <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${p}%;background:${pc}"></div></div><div class="progress-label">${p}%</div></div></td>
     <td style="max-width:140px;font-size:11px;color:#c27803">${t.issue?`⚠ ${esc(t.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
@@ -872,20 +915,22 @@ function setChip(v) { chipFilter=v; document.getElementById('fStatus').value=(v&
 
 function setView(mode) {
   viewMode = mode;
-  const isSpecial = mode === 'dash' || mode === 'gantt';
+  const isSpecial = mode === 'dash' || mode === 'gantt' || mode === 'noticeTree';
   document.querySelector('.table-wrap').style.display  = isSpecial ? 'none' : '';
   document.querySelector('.search-wrap').style.display = isSpecial ? 'none' : '';
   document.querySelector('.filter-row').style.display  = isSpecial ? 'none' : '';
-  document.getElementById('dashView').style.display    = mode==='dash'  ? 'block' : 'none';
-  document.getElementById('ganttView').style.display   = mode==='gantt' ? 'block' : 'none';
-  ['list','person','dash','gantt'].forEach(v => {
-    const id = 'btn'+v.charAt(0).toUpperCase()+v.slice(1);
+  document.getElementById('dashView').style.display        = mode==='dash'        ? 'block' : 'none';
+  document.getElementById('ganttView').style.display       = mode==='gantt'       ? 'block' : 'none';
+  document.getElementById('noticeTreeView').style.display  = mode==='noticeTree'  ? 'block' : 'none';
+  ['list','person','dash','gantt','noticeTree'].forEach(v => {
+    const id = 'btn' + v.charAt(0).toUpperCase() + v.slice(1);
     const btn = document.getElementById(id);
     if (!btn) return;
     btn.style.cssText = `padding:6px 12px;font-size:13px;background:${mode===v?'white':'transparent'};font-weight:${mode===v?'600':'400'};box-shadow:${mode===v?'0 1px 3px rgba(0,0,0,.1)':'none'};border-radius:var(--radius);`;
   });
-  if (mode==='dash')  renderDashboard();
-  else if (mode==='gantt') renderGantt();
+  if (mode==='dash')        { try { renderDashboard(); } catch(e) { console.error('renderDashboard:', e); document.getElementById('dashView').innerHTML = '<p style="padding:24px;color:red;">Lỗi render: '+e.message+'</p>'; } }
+  else if (mode==='gantt')  { try { renderGantt(); }     catch(e) { console.error('renderGantt:', e);     document.getElementById('ganttView').innerHTML = '<p style="padding:24px;color:red;">Lỗi render: '+e.message+'</p>'; } }
+  else if (mode==='noticeTree') { try { renderNoticeTree(); } catch(e) { console.error('renderNoticeTree:', e); document.getElementById('noticeTreeView').innerHTML = '<p style="padding:24px;color:red;">Lỗi render: '+e.message+'</p>'; } }
   else render();
 }
 
@@ -1478,7 +1523,6 @@ function _infoDetail(t) {
       ${row('Người nhận thông tin',ccChips)}
     </table>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
-      <button class="btn btn-outline" onclick="closeInfo();openModal('${t.id}')">✏ Chỉnh sửa</button>
       <button class="btn btn-primary" onclick="closeInfo()">Đóng</button>
     </div>`;
 }
@@ -1677,18 +1721,32 @@ function confirmDlReview() {
 }
 
 // ── THÔNG BÁO ────────────────────────────────────────────────
+const NOTICE_DEFAULT_CC = ['PM - Mr. Kiên', 'PC - Mr. Minh'];
+
 function openNotice() {
-  // Render TẤT CẢ thành viên (kể cả PM, PC) vào dropdown
+  // TO dropdown
   const panel = document.getElementById('noticeRecipGrid');
-  panel.innerHTML = MEMBERS.map(m => {
-    const isPmPc = m==='PM - Mr. Kiên'||m==='PC - Mr. Minh';
-    return `<label class="cc-opt">
+  panel.innerHTML = MEMBERS.map(m =>
+    `<label class="cc-opt">
       <input type="checkbox" value="${esc(m)}" onchange="_updateNoticeRecip()">
-      <span>${esc(m)}${isPmPc?' <span style="font-size:10px;color:#1a56db;font-weight:600;">(mặc định Cc)</span>':''}</span>
-    </label>`;
-  }).join('');
+      <span>${esc(m)}</span>
+    </label>`
+  ).join('');
   panel.classList.remove('open');
   _updateNoticeRecip();
+
+  // CC dropdown – pre-check PM + PC
+  const ccPanel = document.getElementById('noticeCcGrid');
+  ccPanel.innerHTML = MEMBERS.map(m => {
+    const defCC = NOTICE_DEFAULT_CC.includes(m);
+    return `<label class="cc-opt">
+      <input type="checkbox" value="${esc(m)}" ${defCC?'checked':''} onchange="_updateNoticeCc()">
+      <span>${esc(m)}${defCC?' <span style="font-size:10px;color:#1a56db;font-weight:600;">(mặc định)</span>':''}</span>
+    </label>`;
+  }).join('');
+  ccPanel.classList.remove('open');
+  _updateNoticeCc();
+
   document.getElementById('n_title').value='';
   document.getElementById('n_content').value='';
   document.getElementById('n_doc').value='';
@@ -1697,24 +1755,42 @@ function openNotice() {
 
 function closeNotice() {
   document.getElementById('noticeOverlay').classList.remove('open');
-  const p=document.getElementById('noticeRecipGrid');
-  if(p) p.classList.remove('open');
+  document.getElementById('noticeRecipGrid').classList.remove('open');
+  document.getElementById('noticeCcGrid').classList.remove('open');
 }
 
 function toggleNoticeDrop(e) {
   e && e.stopPropagation();
+  document.getElementById('noticeCcGrid').classList.remove('open');
   document.getElementById('noticeRecipGrid').classList.toggle('open');
+}
+
+function toggleNoticeCcDrop(e) {
+  e && e.stopPropagation();
+  document.getElementById('noticeRecipGrid').classList.remove('open');
+  document.getElementById('noticeCcGrid').classList.toggle('open');
 }
 
 function _updateNoticeRecip() {
   const sel=[...document.querySelectorAll('#noticeRecipGrid input:checked')].map(c=>c.value);
   const lbl=document.getElementById('noticeDropLabel');
   const el=document.getElementById('noticeRecipSelected');
-  if(lbl) lbl.textContent = sel.length ? `${sel.length} người được chọn` : 'Chọn người nhận...';
+  if(lbl) lbl.textContent = sel.length ? `${sel.length} người nhận (TO)` : 'Chọn người nhận...';
   if(!el) return;
   el.innerHTML = sel.length
     ? sel.map(m=>`<span class="cc-chip">${esc(m)}</span>`).join('')
     : '<span style="font-size:11px;color:var(--gray-500);">Chưa chọn người nhận</span>';
+}
+
+function _updateNoticeCc() {
+  const sel=[...document.querySelectorAll('#noticeCcGrid input:checked')].map(c=>c.value);
+  const lbl=document.getElementById('noticeCcDropLabel');
+  const el=document.getElementById('noticeCcSelected');
+  if(lbl) lbl.textContent = sel.length ? `${sel.length} người CC` : 'Chọn người CC...';
+  if(!el) return;
+  el.innerHTML = sel.length
+    ? sel.map(m=>`<span class="cc-chip" style="background:#e0f2fe;color:#0369a1;">${esc(m)}</span>`).join('')
+    : '<span style="font-size:11px;color:var(--gray-500);">Không có CC</span>';
 }
 
 function sendNotice() {
@@ -1722,14 +1798,16 @@ function sendNotice() {
   const content=document.getElementById('n_content').value.trim();
   const doc=document.getElementById('n_doc').value.trim();
   const recipients=[...document.querySelectorAll('#noticeRecipGrid input:checked')].map(c=>c.value);
+  const cc=[...document.querySelectorAll('#noticeCcGrid input:checked')].map(c=>c.value);
   if (!title) { toast('Nhập tiêu đề thông báo', 'err'); return; }
   if (!content) { toast('Nhập nội dung thông báo', 'err'); return; }
-  if (!recipients.length) { toast('Chọn ít nhất 1 người nhận', 'err'); return; }
+  if (!recipients.length) { toast('Chọn ít nhất 1 người nhận (TO)', 'err'); return; }
 
-  // Lưu vào localStorage (không tracking deadline)
+  // Lưu vào localStorage
   const notices = JSON.parse(localStorage.getItem('bch_notices')||'[]');
-  notices.unshift({ id:String(Date.now()), title, content, doc, recipients,
-    sentAt: new Date().toLocaleString('vi-VN'), sender:'PC - Mr. Minh' });
+  const noticeObj = { id:String(Date.now()), title, content, doc, recipients, cc,
+    sentAt: new Date().toLocaleString('vi-VN'), sender:'PC - Mr. Minh' };
+  notices.unshift(noticeObj);
   localStorage.setItem('bch_notices', JSON.stringify(notices.slice(0,200)));
 
   // Gửi email qua Apps Script
@@ -1738,12 +1816,12 @@ function sendNotice() {
       method: 'POST',
       body: JSON.stringify({
         action: 'sendNotice',
-        notice: { title, content, doc, recipients, sender: 'PC - Mr. Minh' },
+        notice: { title, content, doc, recipients, cc, sender: 'PC - Mr. Minh' },
         token: SECRET_TOKEN
       })
     }).then(r => r.json()).then(j => {
       if (j.ok && j.message && j.message.includes('thông báo')) {
-        toast('✓ Đã gửi email thông báo đến ' + recipients.length + ' người', 'ok');
+        toast('✓ Đã gửi thông báo đến ' + recipients.length + ' người' + (cc.length ? ` (CC: ${cc.length})` : ''), 'ok');
       } else if (j.ok) {
         toast('⚠ Script chưa cập nhật – vui lòng re-deploy Apps Script rồi thử lại', 'err');
       } else {
@@ -1754,7 +1832,124 @@ function sendNotice() {
     });
   } else { toast('Đã lưu thông báo (WA_URL chưa cài – email chưa gửi)', 'err'); }
 
+  // Refresh tree view nếu đang mở
+  if (document.getElementById('noticeTreeView') && document.getElementById('noticeTreeView').style.display !== 'none') {
+    renderNoticeTree();
+  }
+
   closeNotice();
+}
+
+// ── SƠ ĐỒ CÂY THÔNG BÁO ─────────────────────────────────────
+function renderNoticeTree() {
+  const el = document.getElementById('noticeTreeView');
+  if (!el) return;
+  const notices = JSON.parse(localStorage.getItem('bch_notices') || '[]');
+
+  // Group by person (recipients + cc)
+  const byPerson = {};
+  notices.forEach(n => {
+    const all = [...(n.recipients||[]), ...(n.cc||[])];
+    all.forEach(person => {
+      if (!byPerson[person]) byPerson[person] = [];
+      const isTo = (n.recipients||[]).includes(person);
+      byPerson[person].push({ ...n, _role: isTo ? 'TO' : 'CC' });
+    });
+  });
+
+  const people = Object.keys(byPerson).sort();
+
+  if (!notices.length) {
+    el.innerHTML = `<div style="text-align:center;padding:60px 24px;color:var(--gray-500);">
+      <div style="font-size:48px;margin-bottom:12px;">🔔</div>
+      <div style="font-size:16px;font-weight:600;color:#374151;">Chưa có thông báo nào</div>
+      <div style="font-size:13px;margin-top:6px;">Nhấn nút <strong>📢 Thông báo</strong> để gửi thông báo đầu tiên</div>
+    </div>`;
+    return;
+  }
+
+  const totalCount = notices.length;
+  const html = `
+<div style="max-width:960px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">🔔 Lịch sử thông báo – ${esc(PROJECT_NAME)}</h2>
+      <p style="margin:4px 0 0;font-size:13px;color:var(--gray-500);">${totalCount} thông báo · ${people.length} người nhận</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="openNotice()" style="padding:7px 16px;font-size:13px;background:#0369a1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">＋ Thêm thông báo</button>
+      <button onclick="if(confirm('Xoá toàn bộ lịch sử thông báo?')){localStorage.removeItem(\'bch_notices\');renderNoticeTree();}"
+        style="padding:6px 12px;font-size:12px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-weight:600;">🗑 Xoá lịch sử</button>
+    </div>
+  </div>
+
+  ${people.map(person => {
+    const items = byPerson[person];
+    const toCount = items.filter(n=>n._role==='TO').length;
+    const ccCount = items.filter(n=>n._role==='CC').length;
+    const nodeId = 'nt_' + person.replace(/[^a-zA-Z0-9]/g,'_');
+    return `
+<div style="margin-bottom:14px;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+  <!-- Thành viên header (click to expand) -->
+  <div onclick="document.getElementById('${nodeId}').style.display=document.getElementById('${nodeId}').style.display==='none'?'block':'none';this.querySelector('.nt-arrow').style.transform=document.getElementById('${nodeId}').style.display!=='none'?'rotate(90deg)':'rotate(0deg)'"
+    style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f8fafc;cursor:pointer;user-select:none;border-bottom:1px solid var(--gray-200);">
+    <span class="nt-arrow" style="font-size:14px;color:var(--gray-500);transition:transform .2s;">▶</span>
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#0369a1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;flex-shrink:0;">
+      ${esc(person.split(' ').pop()[0]||'?')}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;font-size:14px;color:#111827;">${esc(person)}</div>
+      <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">
+        ${toCount?`<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-weight:600;margin-right:4px;">TO: ${toCount}</span>`:''}
+        ${ccCount?`<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:10px;font-weight:600;">CC: ${ccCount}</span>`:''}
+      </div>
+    </div>
+    <span style="font-size:12px;color:var(--gray-500);font-weight:600;">${items.length} thông báo</span>
+  </div>
+  <!-- Danh sách thông báo của người này -->
+  <div id="${nodeId}" style="display:none;">
+    ${items.map((n, idx) => {
+      const isLast = idx === items.length - 1;
+      const roleColor = n._role==='TO' ? '#1e40af' : '#0369a1';
+      const roleBg    = n._role==='TO' ? '#dbeafe' : '#e0f2fe';
+      return `
+<div style="display:flex;gap:0;${!isLast?'border-bottom:1px solid var(--gray-100);':''}">
+  <!-- tree line -->
+  <div style="width:48px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:12px 0;">
+    <div style="width:2px;flex:1;background:var(--gray-200);${idx===0?'margin-top:12px':''}"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:${n._role==='TO'?'#1a56db':'#0369a1'};flex-shrink:0;z-index:1;"></div>
+    <div style="width:2px;flex:1;background:${isLast?'transparent':'var(--gray-200)'}"></div>
+  </div>
+  <!-- nội dung -->
+  <div style="flex:1;padding:12px 16px 12px 8px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="background:${roleBg};color:${roleColor};padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;">${n._role}</span>
+          <span style="font-weight:700;font-size:13px;color:#111827;">${esc(n.title||'')}</span>
+        </div>
+        <div style="font-size:12px;color:#374151;line-height:1.5;white-space:pre-wrap;">${esc(n.content||'').substring(0,200)}${(n.content||'').length>200?'…':''}</div>
+        ${n.doc?`<div style="margin-top:6px;"><a href="${esc(n.doc)}" target="_blank" style="font-size:11px;color:#1a56db;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#eff6ff;padding:3px 8px;border-radius:6px;border:1px solid #bfdbfe;">📎 Tài liệu đính kèm</a></div>`:''}
+        ${(n.recipients||[]).length>1||((n.cc||[]).length>0)?`
+        <div style="margin-top:6px;font-size:10px;color:var(--gray-500);">
+          Gửi đến: ${(n.recipients||[]).map(r=>`<span style="background:#f3f4f6;padding:1px 5px;border-radius:4px;margin-right:2px;">${esc(r)}</span>`).join('')}
+          ${(n.cc||[]).length?'· CC: '+(n.cc||[]).map(r=>`<span style="background:#f0f9ff;padding:1px 5px;border-radius:4px;margin-right:2px;">${esc(r)}</span>`).join(''):''}
+        </div>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--gray-500);white-space:nowrap;text-align:right;flex-shrink:0;">
+        <div>🕐 ${esc(n.sentAt||'')}</div>
+        <div style="margin-top:2px;">👤 ${esc(n.sender||'')}</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+    }).join('')}
+  </div>
+</div>`;
+  }).join('')}
+</div>`;
+
+  el.innerHTML = html;
 }
 
 // ── LOGIC ĐÁNH GIÁ TRƯỚC HẠN / ĐÚNG HẠN / TRỄ HẠN ────────────
@@ -1809,7 +2004,6 @@ function openInfo(id) {
         ${row('Tài liệu', t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu tại đây</a>`:'', true)}
       </table>
       <div style="text-align:right;margin-top:18px;">
-        <button class="btn btn-outline" onclick="closeInfo();openModal('${t.id}')">✏ Chỉnh sửa</button>
         <button class="btn btn-primary" onclick="closeInfo()">Đóng</button>
       </div>
     </div>`;
@@ -1926,5 +2120,9 @@ document.addEventListener('keydown', e => {
   if (e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('open') && e.target.tagName!=='TEXTAREA') { e.preventDefault(); saveTask(); }
 });
 </script>
+
+<footer style="text-align:center;padding:24px 16px;font-size:13px;color:#94a3b8;background:#f8fafc;border-top:1px solid #e2e8f0;margin-top:32px;letter-spacing:0.3px;">
+  © 2026 Mai Văn Minh. All rights reserved.
+</footer>
 </body>
 </html>
