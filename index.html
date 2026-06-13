@@ -693,7 +693,7 @@ async function saveTask() {
       tasks[i] = { ...prev, ...task, statusHistory: hist };
     }
   } else {
-    task.id = Date.now(); task.created = todayStr();
+    task.id = 'tmp_' + Date.now(); task.created = todayStr();
     task.statusHistory = [{
       type:'CREATE_TASK', actor:'Hệ thống',
       taskName:task.name, deadline:task.deadline, priority:task.priority, person:task.person,
@@ -708,6 +708,13 @@ async function saveTask() {
       const action = editId !== null ? 'updateTask' : 'addTask';
       const r = await fetch(WA_URL, { method:'POST', body:JSON.stringify({action, task, token: SECRET_TOKEN}) });
       const j = await r.json();
+      if (j.ok && action === 'addTask' && j.id !== undefined) {
+        const localTask = tasks.find(t => String(t.id) === String(task.id));
+        if (localTask) localTask.id = j.id;
+        task.id = j.id;
+        saveTasks();
+        render();
+      }
       toast(j.ok ? (editId?'Đã cập nhật!':`Đã giao việc & gửi email đến ${person}!`) : 'Lỗi: '+(j.error||''), j.ok?'ok':'err');
     } catch(e) { toast('Lỗi kết nối: ' + e.message, 'err'); }
   } else {
