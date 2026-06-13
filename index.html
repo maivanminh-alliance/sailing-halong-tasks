@@ -98,10 +98,24 @@
   .st-check{width:16px;height:16px;cursor:pointer;flex-shrink:0;margin-top:2px;}
   .st-name{font-size:13px;font-weight:500;}
   .st-meta{font-size:11px;color:var(--gray-500);margin-top:2px;}
-  /* CC members */
-  .cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;max-height:120px;overflow-y:auto;border:1.5px solid var(--gray-300);border-radius:8px;padding:6px;background:white;}
-  .cc-row{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;font-size:12px;cursor:pointer;}
-  .cc-row:hover{background:var(--gray-50);}
+  /* CC multi-select dropdown */
+  .cc-drop-wrap{position:relative;}
+  .cc-drop-btn{width:100%;text-align:left;background:white;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:#374151;transition:border-color .15s;}
+  .cc-drop-btn:hover,.cc-drop-btn:focus{border-color:var(--primary);outline:none;}
+  .cc-drop-panel{position:absolute;z-index:200;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid var(--primary);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:400px;overflow-y:auto;display:none;}
+  .cc-drop-panel.open{display:block;}
+  .cc-opt{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--gray-100);}
+  .cc-opt:last-child{border-bottom:none;}
+  .cc-opt:hover{background:#eff6ff;}
+  .cc-opt input{width:15px;height:15px;cursor:pointer;accent-color:var(--primary);}
+  /* Gantt */
+  .gantt-wrap{display:flex;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:white;}
+  .gantt-left{flex-shrink:0;border-right:2px solid #1a56db;overflow:hidden;}
+  .gantt-right{flex:1;overflow-x:auto;overflow-y:hidden;}
+  .gantt-hdr-cell{font-size:11px;font-weight:700;padding:6px 8px;border-right:1px solid rgba(255,255,255,.2);white-space:nowrap;overflow:hidden;}
+  .gantt-cell{padding:0 8px;border-right:1px solid #e5e7eb;display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .gantt-row-left{display:flex;align-items:stretch;border-bottom:1px solid #f3f4f6;min-height:40px;}
+  .gantt-row-right{position:relative;border-bottom:1px solid #f3f4f6;min-height:40px;}
   .cc-chip{display:inline-flex;align-items:center;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin:2px;}
   /* Deadline requests */
   .dl-req-card{border:1px solid var(--gray-200);border-radius:8px;padding:11px 13px;margin-bottom:8px;}
@@ -191,9 +205,12 @@
 <!-- TOOLBAR -->
 <div class="toolbar">
   <button class="btn btn-primary" onclick="openModal()">＋ Thêm công việc</button>
+  <button class="btn" onclick="openNotice()" style="background:#0369a1;color:white;font-weight:600;">📢 Thông báo</button>
   <div style="display:flex;gap:4px;background:var(--gray-100);border-radius:var(--radius);padding:3px;">
     <button id="btnList" class="btn" onclick="setView('list')" style="padding:6px 12px;font-size:13px;">📋 Danh sách</button>
     <button id="btnPerson" class="btn" onclick="setView('person')" style="padding:6px 12px;font-size:13px;">👤 Theo thành viên</button>
+    <button id="btnDash" class="btn" onclick="setView('dash')" style="padding:6px 12px;font-size:13px;">📈 Hiệu suất</button>
+    <button id="btnGantt" class="btn" onclick="setView('gantt')" style="padding:6px 12px;font-size:13px;">🗓 Tiến độ</button>
   </div>
   <button class="btn btn-outline" onclick="openEval()" style="border-color:#7c3aed;color:#6d28d9;">📊 Đánh giá tháng</button>
 </div>
@@ -240,6 +257,11 @@
   </table>
 </div>
 
+<!-- DASHBOARD VIEW -->
+<div id="dashView" style="display:none;padding:16px 20px 32px;"></div>
+<!-- GANTT VIEW -->
+<div id="ganttView" style="display:none;padding:16px 20px 32px;"></div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
   <div class="modal">
@@ -282,14 +304,15 @@
         <input type="date" id="f_doneDate">
       </div>
       <div class="field-group">
-        <label class="field-label" style="cursor:pointer;display:flex;justify-content:space-between;" onclick="document.getElementById('ccCollapse').classList.toggle('hidden')">
-          <span>👥 Người nhận thông tin</span>
-          <span style="font-size:11px;color:var(--gray-500);">Cc thêm ngoài PC &amp; PM ▾</span>
-        </label>
-        <div id="ccCollapse">
-          <div class="cc-grid" id="ccGrid"></div>
-          <div id="ccSelected" style="margin-top:5px;min-height:18px;"></div>
+        <label class="field-label">👥 Người nhận thông tin <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(Cc thêm ngoài PC &amp; PM)</span></label>
+        <div class="cc-drop-wrap">
+          <button type="button" id="ccDropBtn" class="cc-drop-btn" onclick="toggleCcDrop(event)">
+            <span id="ccDropLabel">Chọn người nhận thêm...</span>
+            <span style="font-size:10px;color:var(--gray-500);">▼</span>
+          </button>
+          <div id="ccDropPanel" class="cc-drop-panel"></div>
         </div>
+        <div id="ccSelected" style="margin-top:5px;min-height:18px;display:flex;flex-wrap:wrap;gap:3px;"></div>
       </div>
       <div class="field-group"><label class="field-label">Ghi chú / Nội dung</label><textarea id="f_note" placeholder="Mô tả công việc..."></textarea></div>
       <div class="field-group"><label class="field-label">Vướng mắc</label><textarea id="f_issue" placeholder="Vấn đề cần báo cáo..." style="min-height:50px"></textarea></div>
@@ -335,6 +358,45 @@
       </div>
     </div>
     <div class="modal-body" id="evalBody"></div>
+  </div>
+</div>
+
+<!-- NOTICE MODAL -->
+<div class="modal-overlay" id="noticeOverlay" onclick="if(event.target.id==='noticeOverlay')closeNotice()">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header" style="background:#0369a1;">
+      <div class="modal-title" style="color:white;">📢 Gửi thông báo</div>
+      <button class="modal-close" style="color:white;" onclick="closeNotice()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Tiêu đề thông báo *</label>
+        <input type="text" id="n_title" placeholder="Nhập tiêu đề...">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Nội dung *</label>
+        <textarea id="n_content" rows="5" placeholder="Nhập nội dung thông báo..." style="resize:vertical;"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Tài liệu đính kèm (link)</label>
+        <input type="url" id="n_doc" placeholder="https://...">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Gửi đến * <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(TO – người nhận chính)</span></label>
+        <div class="cc-drop-wrap">
+          <button type="button" id="noticeDropBtn" class="cc-drop-btn" onclick="toggleNoticeDrop(event)">
+            <span id="noticeDropLabel">Chọn người nhận...</span>
+            <span style="font-size:10px;color:var(--gray-500);">▼</span>
+          </button>
+          <div id="noticeRecipGrid" class="cc-drop-panel"></div>
+        </div>
+        <div id="noticeRecipSelected" style="margin-top:5px;min-height:22px;display:flex;flex-wrap:wrap;gap:3px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeNotice()">Hủy</button>
+      <button class="btn" style="background:#0369a1;color:white;font-weight:600;" onclick="sendNotice()">📨 Gửi thông báo</button>
+    </div>
   </div>
 </div>
 
@@ -444,7 +506,8 @@ async function loadFromSheet() {
         deadline:parseGvizDate(get(r,'Deadline')), status,
         progress:parseInt(get(r,'Tiến độ (%)'))||0,
         note:get(r,'Ghi chú'), issue:get(r,'Vướng mắc'), doc:get(r,'Tài liệu'),
-        result:get(r,'Kết quả / Báo cáo'), doneDate };
+        result:get(r,'Kết quả / Báo cáo'), doneDate,
+        created: parseGvizDate(get(r,'Ngày tạo')) };
     });
     if (parsed.length) { tasks = parsed; saveTasks(); }
     render(); setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
@@ -576,8 +639,101 @@ function render() {
   else renderFlat(filtered, body);
 }
 
+// Trạng thái mở/đóng task con trong bảng
+const _stOpen = {};
+let _addingStTo = null; // id task đang thêm task con inline
+
+function _subtaskRows(t) {
+  const sts = t.subtasks || [];
+  if (!sts.length) return '';
+  const td = todayStr();
+  return sts.map((s, i) => {
+    const isDone = s.status === 'Hoàn thành';
+    const isOD   = s.deadline && s.deadline < td && !isDone;
+    const diff   = s.deadline ? Math.ceil((new Date(s.deadline)-new Date(td))/86400000) : null;
+    const pct    = isDone ? 100 : 0;
+    const pc     = isDone ? '#059669' : isOD ? '#ef4444' : '#8b5cf6';
+    const bgRow  = isDone ? '#f0fdf4' : isOD ? '#fff5f5' : '#f8f7ff';
+    const bdCol  = isDone ? '#10b981' : isOD ? '#ef4444' : '#a78bfa';
+    let dlHtml = '<span style="color:var(--gray-300);font-size:11px;">–</span>';
+    if (s.deadline) {
+      const lbl = fmtVN(s.deadline);
+      if (isDone) dlHtml = `<span style="font-size:11px;color:#6b7280;">${lbl}</span>`;
+      else if (isOD) dlHtml = `<span style="font-size:11px;color:#dc2626;font-weight:700;">${lbl}<br><small>trễ ${Math.abs(diff)}d</small></span>`;
+      else if (diff===0) dlHtml = `<span style="font-size:11px;color:#c27803;">${lbl} <span style="background:#fef3c7;padding:0 3px;border-radius:3px;font-size:9px;">Hôm nay</span></span>`;
+      else if (diff<=2) dlHtml = `<span style="font-size:11px;color:#c27803;">${lbl} <small>(còn ${diff}d)</small></span>`;
+      else dlHtml = `<span style="font-size:11px;color:#374151;">${lbl}</span>`;
+    }
+    return `<tr style="background:${bgRow};border-left:3px solid ${bdCol};">
+      <td style="width:36px;"></td>
+      <td colspan="2" style="padding:5px 8px 5px 30px;">
+        <div style="display:flex;align-items:flex-start;gap:6px;">
+          <span style="font-size:10px;font-weight:800;color:#8b5cf6;min-width:22px;line-height:20px;">${i+1}</span>
+          <input type="checkbox" ${isDone?'checked':''} onchange="toggleSubtask('${t.id}','${s.id}',this.checked)"
+            style="width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;flex-shrink:0;margin-top:3px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:500;${isDone?'text-decoration:line-through;color:#9ca3af;':isOD?'color:#dc2626;':'color:#1f2937;'}">${esc(s.name)}</div>
+            ${s.note?`<div style="font-size:10px;color:#c27803;margin-top:1px;">📝 ${esc(s.note)}</div>`:''}
+            <div style="display:flex;align-items:center;gap:4px;margin-top:3px;">
+              <div style="height:5px;width:80px;background:#e5e7eb;border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:${pc};border-radius:3px;transition:width .3s;"></div>
+              </div>
+              <span style="font-size:9px;color:#6b7280;font-weight:600;">${pct}%</span>
+              ${isDone&&s.doneDate?`<span style="font-size:9px;color:#059669;margin-left:4px;">✓ ${fmtVN(s.doneDate)}</span>`:''}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:11px;color:#6b7280;white-space:nowrap;">${esc(t.person||'')}</td>
+      <td></td>
+      <td style="white-space:nowrap;">${dlHtml}</td>
+      <td><span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;
+        color:${isDone?'#065f46':isOD?'#dc2626':'#5b21b6'};
+        background:${isDone?'#d1fae5':isOD?'#fee2e2':'#ede9fe'};">
+        ${isDone?'✓ Xong':isOD?'⚠ Trễ':'○ Chưa'}
+      </span></td>
+      <td><div style="width:60px;"><div style="height:5px;background:#e5e7eb;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${pc};"></div></div><div style="font-size:9px;color:#6b7280;text-align:right;">${pct}%</div></div></td>
+      <td colspan="2"></td>
+      <td style="padding:4px 6px;">
+        <button onclick="delSubtask('${t.id}','${s.id}')" title="Xoá task con"
+          style="padding:2px 7px;font-size:11px;background:#fee2e2;color:#dc2626;border:none;border-radius:5px;cursor:pointer;font-weight:600;">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function _quickAddStRow(taskId) {
+  return `<tr style="background:#f0e6ff;border-left:3px solid #7c3aed;">
+    <td></td>
+    <td colspan="7" style="padding:7px 8px 7px 30px;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:13px;color:#a78bfa;">└</span>
+        <span style="font-size:10px;font-weight:800;color:#8b5cf6;min-width:22px;">+</span>
+        <input id="qaStName_${taskId}" type="text" placeholder="Tên task con..."
+          style="flex:1;min-width:140px;font-size:12px;padding:4px 8px;border:1.5px solid #7c3aed;border-radius:6px;outline:none;"
+          onkeydown="if(event.key==='Enter')submitQuickAddSt('${taskId}')">
+        <input id="qaStDeadline_${taskId}" type="date"
+          style="font-size:12px;padding:4px 8px;border:1.5px solid var(--gray-300);border-radius:6px;outline:none;">
+        <button onclick="submitQuickAddSt('${taskId}')"
+          style="padding:4px 12px;background:#7c3aed;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
+          ＋ Thêm
+        </button>
+        <button onclick="_addingStTo=null;render();"
+          style="padding:4px 9px;background:white;color:var(--gray-500);border:1.5px solid var(--gray-300);border-radius:6px;font-size:12px;cursor:pointer;">
+          Huỷ
+        </button>
+      </div>
+    </td>
+    <td colspan="3"></td>
+  </tr>`;
+}
+
 function renderFlat(filtered, body) {
-  body.innerHTML = filtered.map(t => taskRow(t)).join('');
+  body.innerHTML = filtered.map(t => {
+    const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t) : '';
+    const addRow = _addingStTo===t.id ? _quickAddStRow(t.id) : '';
+    return taskRow(t) + stRows + addRow;
+  }).join('');
 }
 
 function renderByPerson(filtered, body) {
@@ -585,8 +741,21 @@ function renderByPerson(filtered, body) {
   const keys = MEMBERS.filter(m => grouped[m]).concat(Object.keys(grouped).filter(k=>!MEMBERS.includes(k)));
   body.innerHTML = keys.map(p => {
     const pts=grouped[p]; const done=pts.filter(t=>t.status==='Hoàn thành').length;
-    return `<tr class="person-header"><td colspan="11">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}</td></tr>`+pts.map(t=>taskRow(t)).join('');
+    const stTotal=pts.reduce((s,t)=>(s+(t.subtasks||[]).length),0);
+    const stDone=pts.reduce((s,t)=>(s+(t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length),0);
+    const stInfo = stTotal ? ` &nbsp;·&nbsp; 📌 Tasks con: ${stDone}/${stTotal}` : '';
+    return `<tr class="person-header"><td colspan="11">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
+      + pts.map(t => {
+        const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t) : '';
+        const addRow = _addingStTo===t.id ? _quickAddStRow(t.id) : '';
+        return taskRow(t) + stRows + addRow;
+      }).join('');
   }).join('');
+}
+
+function toggleSubtaskRows(id) {
+  _stOpen[id] = _stOpen[id]===false ? true : false;
+  render();
 }
 
 function taskRow(t) {
@@ -595,7 +764,7 @@ function taskRow(t) {
   const sMap={'Chưa làm':'chua','Đang làm':'dang','Hoàn thành':'xong'};
   const sIcon={'Chưa làm':'○','Đang làm':'◑','Hoàn thành':'✓'};
   const stDone=(t.subtasks||[]).filter(s=>s.status==='Hoàn thành').length, stTotal=(t.subtasks||[]).length;
-  const stBadgeBtn = stTotal ? `📌 ${stDone}/${stTotal}` : '📌';
+  const stBadgeBtn = stTotal ? `📌 ${stDone}/${stTotal}` : '＋';
   const dlrPending = (t.dlRequests||[]).some(r=>r.status==='pending');
   const p=Math.max(0,Math.min(100,parseInt(t.progress)||0));
   const pc=p===100?'#059669':p>60?'#3b82f6':p>30?'#f59e0b':'#ef4444';
@@ -612,9 +781,30 @@ function taskRow(t) {
   const stBadge=(t.status!=='Hoàn thành'&&t.deadline&&t.deadline<td)
     ?`<span class="badge badge-trehan">⚠ Trễ hạn</span>`
     :`<span class="badge badge-${sMap[t.status]||'chua'}">${sIcon[t.status]||''} ${t.status}</span>`;
-  return `<tr>
+  // Nút mở/đóng task con (▶ / ▼)
+  const hasSubtasks = stTotal > 0;
+  const isOpen = _stOpen[t.id] !== false; // mặc định mở
+  const toggleBtn = hasSubtasks
+    ? `<button onclick="toggleSubtaskRows('${t.id}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#7c3aed;padding:0 3px;line-height:1;" title="${isOpen?'Ẩn task con':'Hiện task con'}">${isOpen?'▼':'▶'}</button>`
+    : '';
+  const stBadge2 = hasSubtasks
+    ? `<span style="font-size:10px;background:${stDone===stTotal?'#d1fae5':'#ede9fe'};color:${stDone===stTotal?'#065f46':'#7c3aed'};padding:1px 6px;border-radius:10px;font-weight:700;margin-left:4px;">📌 ${stDone}/${stTotal}</span>`
+    : '';
+  return `<tr style="border-left:${hasSubtasks?'3px solid #7c3aed':'3px solid transparent'};">
     <td><input type="checkbox" class="row-check" data-id="${t.id}"></td>
-    <td><div class="task-name">${esc(t.name)}${stTotal?`<span style="font-size:11px;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:5px;">📌 ${stDone}/${stTotal}</span>`:''}${dlrPending?`<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:5px;">⏳ Chờ duyệt dời hạn</span>`:''}</div>${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}</td>
+    <td>
+      <div class="task-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+        ${toggleBtn}
+        <span>${esc(t.name)}</span>
+        ${stBadge2}
+        ${dlrPending?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:600;">⏳ Chờ dời hạn</span>`:''}
+        <button onclick="openQuickAddSt('${t.id}')" title="Thêm task con"
+          style="margin-left:2px;padding:0 6px;height:18px;font-size:11px;font-weight:700;background:${_addingStTo===t.id?'#7c3aed':'#ede9fe'};color:${_addingStTo===t.id?'white':'#7c3aed'};border:1px solid #a78bfa;border-radius:9px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:2px;">
+          ＋ Task con
+        </button>
+      </div>
+      ${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}
+    </td>
     <td><span class="role-tag">${esc(t.person||'')}</span></td>
     <td style="font-size:12px;color:var(--gray-500)">${esc(t.category||'')}</td>
     <td><span class="badge badge-${uMap[t.priority]||'trung'}">${t.priority||''}</span></td>
@@ -624,8 +814,7 @@ function taskRow(t) {
     <td style="max-width:140px;font-size:11px;color:#c27803">${t.issue?`⚠ ${esc(t.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td><div class="actions">
-      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Chi tiết / Tasks con / Dời deadline" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
-      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}','subtasks')" title="Tasks con" style="color:#7c3aed;border-color:#7c3aed;">${stBadgeBtn}</button>
+      <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Chi tiết / Dời deadline" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
       <button class="btn btn-outline btn-sm" onclick="openModal('${t.id}')">✏</button>
       <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}')">✕</button>
     </div></td>
@@ -657,10 +846,454 @@ function calcStats() {
 function setChip(v) { chipFilter=v; document.getElementById('fStatus').value=(v&&v!=='_over')?v:''; render(); }
 
 function setView(mode) {
-  viewMode=mode;
-  document.getElementById('btnList').style.cssText   = `padding:6px 12px;font-size:13px;background:${mode==='list'?'white':'transparent'};font-weight:${mode==='list'?'600':'400'};box-shadow:${mode==='list'?'0 1px 3px rgba(0,0,0,.1)':'none'};border-radius:var(--radius);`;
-  document.getElementById('btnPerson').style.cssText = `padding:6px 12px;font-size:13px;background:${mode==='person'?'white':'transparent'};font-weight:${mode==='person'?'600':'400'};box-shadow:${mode==='person'?'0 1px 3px rgba(0,0,0,.1)':'none'};border-radius:var(--radius);`;
-  render();
+  viewMode = mode;
+  const isSpecial = mode === 'dash' || mode === 'gantt';
+  document.querySelector('.table-wrap').style.display  = isSpecial ? 'none' : '';
+  document.querySelector('.search-wrap').style.display = isSpecial ? 'none' : '';
+  document.querySelector('.filter-row').style.display  = isSpecial ? 'none' : '';
+  document.getElementById('dashView').style.display    = mode==='dash'  ? 'block' : 'none';
+  document.getElementById('ganttView').style.display   = mode==='gantt' ? 'block' : 'none';
+  ['list','person','dash','gantt'].forEach(v => {
+    const id = 'btn'+v.charAt(0).toUpperCase()+v.slice(1);
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.style.cssText = `padding:6px 12px;font-size:13px;background:${mode===v?'white':'transparent'};font-weight:${mode===v?'600':'400'};box-shadow:${mode===v?'0 1px 3px rgba(0,0,0,.1)':'none'};border-radius:var(--radius);`;
+  });
+  if (mode==='dash')  renderDashboard();
+  else if (mode==='gantt') renderGantt();
+  else render();
+}
+
+// ── GANTT / TIẾN ĐỘ ─────────────────────────────────────────
+function renderGantt() {
+  const el = document.getElementById('ganttView');
+  const all = tasks.filter(t=>t.name).sort((a,b)=>{
+    if (!a.deadline&&!b.deadline) return 0;
+    if (!a.deadline) return 1; if (!b.deadline) return -1;
+    return a.deadline.localeCompare(b.deadline);
+  });
+  if (!all.length) { el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray-500);">Chưa có dữ liệu</div>'; return; }
+
+  const td = todayStr();
+  const today = new Date(td);
+
+  // Phạm vi hiển thị: 3 tuần trước – 10 tuần sau hôm nay (hoặc đến deadline xa nhất)
+  let rangeEnd = new Date(today); rangeEnd.setDate(rangeEnd.getDate()+70);
+  all.forEach(t=>{ if(t.deadline&&t.deadline>rangeEnd.toISOString().slice(0,10)){ rangeEnd=new Date(t.deadline); rangeEnd.setDate(rangeEnd.getDate()+7); }});
+  const rangeStart = new Date(today); rangeStart.setDate(rangeStart.getDate()-21);
+
+  const totalDays = Math.ceil((rangeEnd-rangeStart)/86400000);
+  const DW = 32; // px per day
+  const RH = 42; // row height px
+
+  // Tạo mảng ngày
+  const days = Array.from({length:totalDays},(_,i)=>{ const d=new Date(rangeStart); d.setDate(d.getDate()+i); return d; });
+  const todayIdx = days.findIndex(d=>d.toISOString().slice(0,10)===td);
+
+  // ── Header tháng ──
+  const months=[]; let cur=null;
+  days.forEach((d,i)=>{ const key=d.getFullYear()+'-'+d.getMonth();
+    if(key!==cur){ months.push({label:d.toLocaleDateString('vi-VN',{month:'long',year:'numeric'}),start:i,count:1}); cur=key; }
+    else months[months.length-1].count++;
+  });
+
+  // ── LEFT PANEL config ──
+  const COLS = [
+    {id:'stt',  label:'#',            w:32},
+    {id:'name', label:'Tên công việc',w:200},
+    {id:'who',  label:'Người PT',     w:120},
+    {id:'dl',   label:'Deadline',     w:88},
+    {id:'st',   label:'Trạng thái',   w:80},
+    {id:'pg',   label:'TĐ%',          w:48},
+  ];
+  const leftW = COLS.reduce((s,c)=>s+c.w,0);
+
+  const hdrBg='background:#1a56db;color:white;font-size:11px;font-weight:700;';
+  const rowBg=(i)=>i%2===0?'background:white;':'background:#f9fafb;';
+
+  // ── LEFT header ──
+  const leftHdr = `<div style="display:flex;${hdrBg}border-bottom:2px solid #1447c0;">
+    ${COLS.map(c=>`<div style="width:${c.w}px;flex-shrink:0;padding:8px 6px;border-right:1px solid rgba(255,255,255,.15);overflow:hidden;white-space:nowrap;">${c.label}</div>`).join('')}
+  </div>`;
+
+  // ── RIGHT header (months + days) ──
+  const monthHdr = `<div style="display:flex;${hdrBg}border-bottom:1px solid #1447c0;">
+    ${months.map(m=>`<div class="gantt-hdr-cell" style="width:${m.count*DW}px;flex-shrink:0;">${m.label}</div>`).join('')}
+  </div>`;
+  const dayHdr = `<div style="display:flex;background:#e8f0fe;border-bottom:2px solid #c7d7fc;font-size:10px;">
+    ${days.map((d,i)=>{
+      const isT=i===todayIdx, isSun=d.getDay()===0, isSat=d.getDay()===6, isMon=d.getDay()===1;
+      const bg=isT?'#1a56db':isSun||isSat?'#f3e8ff':'';
+      const col=isT?'white':isSun||isSat?'#7c3aed':'#374151';
+      return `<div style="width:${DW}px;flex-shrink:0;text-align:center;padding:3px 0;border-right:1px solid ${isT?'#1a56db':isMon?'#93c5fd':'#dbeafe'};background:${bg};color:${col};font-weight:${isT?'700':'400'};">${d.getDate()}</div>`;
+    }).join('')}
+  </div>`;
+
+  // ── ROWS ──
+  const sIcon={'Chưa làm':'○','Đang làm':'◑','Hoàn thành':'✓'};
+  const leftRows=[], rightRows=[];
+
+  all.forEach((t,i)=>{
+    const isOverdue = t.deadline&&t.deadline<td&&t.status!=='Hoàn thành';
+    const prog = Math.max(0,Math.min(100,parseInt(t.progress)||0));
+
+    // Status badge inline
+    const sColor = t.status==='Hoàn thành'?'#065f46':isOverdue?'#991b1b':t.status==='Đang làm'?'#1e40af':'#92400e';
+    const sBg    = t.status==='Hoàn thành'?'#d1fae5':isOverdue?'#fee2e2':t.status==='Đang làm'?'#dbeafe':'#fef3c7';
+
+    leftRows.push(`<div class="gantt-row-left" style="${rowBg(i)}cursor:pointer;" onclick="openInfo('${t.id}')">
+      <div style="width:${COLS[0].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca3af;">${i+1}</div>
+      <div style="width:${COLS[1].w}px;flex-shrink:0;padding:0 8px;border-right:1px solid #e5e7eb;display:flex;align-items:center;overflow:hidden;">
+        <span style="font-size:12px;font-weight:600;color:${isOverdue?'#dc2626':'#111827'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(t.name)}">${esc(t.name)}</span>
+      </div>
+      <div style="width:${COLS[2].w}px;flex-shrink:0;padding:0 6px;border-right:1px solid #e5e7eb;display:flex;align-items:center;font-size:11px;color:#374151;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc((t.person||'').split(' ').slice(-2).join(' '))}</div>
+      <div style="width:${COLS[3].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:${isOverdue?'700':'400'};color:${isOverdue?'#dc2626':'#374151'};">${t.deadline?fmtVN(t.deadline):'–'}</div>
+      <div style="width:${COLS[4].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:10px;font-weight:700;color:${sColor};background:${sBg};padding:1px 5px;border-radius:8px;">${sIcon[t.status]||''} ${t.status==='Đang làm'?'Làm':t.status==='Hoàn thành'?'Xong':'Chờ'}</span>
+      </div>
+      <div style="width:${COLS[5].w}px;flex-shrink:0;padding:0 4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${prog===100?'#059669':'#1a56db'};">${prog}%</div>
+    </div>`);
+
+    // Gantt bar – task mẹ kéo theo deadline task con nếu dài hơn
+    let barHtml='';
+    if (t.deadline) {
+      const dlDate = new Date(t.deadline);
+
+      // Deadline hiệu lực = max(deadline task mẹ, deadline task con xa nhất)
+      let effectiveDL = new Date(dlDate);
+      (t.subtasks||[]).forEach(s => {
+        if (s.deadline) { const sd=new Date(s.deadline); if(sd>effectiveDL) effectiveDL=new Date(sd); }
+      });
+      const parentExtended = effectiveDL > dlDate; // task mẹ bị kéo dài bởi task con
+
+      // Ngày bắt đầu: ưu tiên t.created, fallback deadline − 14 ngày
+      let startDate;
+      try { if(t.created) startDate=new Date(t.created); } catch(e){}
+      if (!startDate||isNaN(startDate)||startDate>dlDate) {
+        startDate=new Date(dlDate); startDate.setDate(startDate.getDate()-14);
+      }
+      if (startDate<rangeStart) startDate=new Date(rangeStart);
+
+      const barStartPx = Math.max(0,Math.ceil((startDate-rangeStart)/86400000))*DW;
+      // Thanh chính đến deadline gốc
+      const barEndPx   = Math.min(totalDays,Math.ceil((dlDate-rangeStart)/86400000)+1)*DW;
+      const barW       = Math.max(DW, barEndPx-barStartPx);
+
+      let barFill='#3b82f6', barBg='#bfdbfe';
+      if (t.status==='Hoàn thành') { barFill='#10b981'; barBg='#a7f3d0'; }
+      else if (isOverdue)          { barFill='#ef4444'; barBg='#fecaca'; }
+      else if (t.status==='Chưa làm') { barFill='#94a3b8'; barBg='#e2e8f0'; }
+
+      const stTotal=(t.subtasks||[]).length, stDone=(t.subtasks||[]).filter(s=>s.status==='Hoàn thành').length;
+      const stTxt = stTotal?`<span style="font-size:9px;opacity:.85;"> 📌${stDone}/${stTotal}</span>`:'';
+
+      // Vùng trễ hạn (sau deadline, nếu chưa xong)
+      let overdueExt='';
+      if (isOverdue && t.status!=='Hoàn thành') {
+        const odStart = Math.min(totalDays, Math.ceil((dlDate-rangeStart)/86400000)+1);
+        const odEnd   = Math.min(totalDays, Math.ceil((today-rangeStart)/86400000)+1);
+        const odW     = Math.max(0,(odEnd-odStart)*DW);
+        if (odW>0) overdueExt=`<div style="position:absolute;left:${odStart*DW}px;top:8px;width:${odW}px;height:26px;background:repeating-linear-gradient(45deg,#fee2e2,#fee2e2 3px,#fecaca 3px,#fecaca 6px);border:1px dashed #ef4444;border-left:none;border-radius:0 4px 4px 0;display:flex;align-items:center;padding-left:4px;overflow:hidden;"><span style="font-size:9px;font-weight:700;color:#dc2626;white-space:nowrap;">⚠ Trễ ${Math.ceil((today-dlDate)/86400000)}d</span></div>`;
+      }
+
+      // Phần mở rộng khi task con dài hơn task mẹ
+      let extBar='';
+      if (parentExtended) {
+        const extStart = Math.min(totalDays, Math.ceil((dlDate-rangeStart)/86400000)+1);
+        const extEnd   = Math.min(totalDays, Math.ceil((effectiveDL-rangeStart)/86400000)+1);
+        const extW     = Math.max(0,(extEnd-extStart)*DW);
+        if (extW>0) extBar=`<div style="position:absolute;left:${extStart*DW}px;top:10px;width:${extW}px;height:22px;background:repeating-linear-gradient(90deg,#ddd6fe,#ddd6fe 4px,#ede9fe 4px,#ede9fe 8px);border:1.5px dashed #7c3aed;border-left:none;border-radius:0 3px 3px 0;" title="Kéo dài theo task con đến ${fmtVN(effectiveDL.toISOString().slice(0,10))}"></div>`;
+      }
+
+      barHtml=`${overdueExt}${extBar}<div style="position:absolute;left:${barStartPx}px;top:8px;width:${barW}px;height:26px;background:${barBg};border-radius:4px;overflow:hidden;border:1px solid ${barFill}50;">
+        <div style="width:${prog}%;height:100%;background:${barFill};transition:width .4s;border-radius:3px 0 0 3px;"></div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 7px;gap:3px;">
+          <span style="font-size:10px;font-weight:700;color:white;text-shadow:0 1px 2px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${esc(t.name.length>22?t.name.slice(0,20)+'…':t.name)}</span>
+          ${stTxt}
+        </div>
+      </div>`;
+    }
+
+    // Today vertical line
+    const todayLine = todayIdx>=0
+      ? `<div style="position:absolute;left:${todayIdx*DW+DW/2}px;top:0;bottom:0;width:2px;background:#ef4444;opacity:.4;pointer-events:none;"></div>`
+      : '';
+
+    // Day grid lines
+    const gridLines = days.map((d,j)=>{
+      const isT=j===todayIdx, isMon=d.getDay()===1, isSun=d.getDay()===0, isSat=d.getDay()===6;
+      return `<div style="position:absolute;left:${j*DW}px;top:0;width:${DW}px;height:100%;border-right:1px solid ${isT?'#ef4444':isMon?'#bfdbfe':'#f3f4f6'};background:${isT?'rgba(239,68,68,.04)':isSun||isSat?'rgba(124,58,237,.03)':''};"></div>`;
+    }).join('');
+
+    rightRows.push(`<div class="gantt-row-right" style="${rowBg(i)}">${gridLines}${todayLine}${barHtml}</div>`);
+
+    // ── Task con dưới task mẹ ──
+    const sts = t.subtasks || [];
+    sts.forEach(s => {
+      const isDone = s.status==='Hoàn thành';
+      const isOD   = s.deadline && s.deadline < td && !isDone;
+      const sColor = isDone?'#065f46':isOD?'#dc2626':'#374151';
+      const sBg2   = isDone?'#f0fdf4':isOD?'#fff1f2':'#f5f3ff';
+
+      leftRows.push(`<div class="gantt-row-left" style="background:${sBg2};border-left:3px solid ${isDone?'#10b981':isOD?'#ef4444':'#7c3aed'};">
+        <div style="width:${COLS[0].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#c4b5fd;">└</div>
+        <div style="width:${COLS[1].w}px;flex-shrink:0;padding:0 8px 0 20px;border-right:1px solid #e5e7eb;display:flex;align-items:center;gap:6px;overflow:hidden;">
+          <input type="checkbox" ${isDone?'checked':''} onchange="toggleSubtask('${t.id}','${s.id}',this.checked);renderGantt();" style="width:13px;height:13px;accent-color:#7c3aed;cursor:pointer;flex-shrink:0;">
+          <span style="font-size:11px;font-weight:500;color:${sColor};${isDone?'text-decoration:line-through;':''}white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(s.name)}">${esc(s.name)}</span>
+        </div>
+        <div style="width:${COLS[2].w}px;flex-shrink:0;border-right:1px solid #e5e7eb;"></div>
+        <div style="width:${COLS[3].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:${isOD?'700':'400'};color:${isOD?'#dc2626':'#6b7280'};">${s.deadline?fmtVN(s.deadline):'–'}</div>
+        <div style="width:${COLS[4].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:9px;font-weight:700;color:${sColor};background:${sBg2};padding:1px 4px;border-radius:6px;border:1px solid ${isDone?'#a7f3d0':isOD?'#fecaca':'#c4b5fd'};">${isDone?'✓':isOD?'⚠':'○'}</span>
+        </div>
+        <div style="width:${COLS[5].w}px;flex-shrink:0;"></div>
+      </div>`);
+
+      // Bar cho task con – bắt đầu từ ngày tạo task mẹ (hoặc deadline - 7 ngày)
+      let stBarHtml='';
+      if (s.deadline) {
+        const dlD = new Date(s.deadline);
+        // Dùng ngày tạo task mẹ làm điểm bắt đầu task con
+        let stStart; try { stStart = t.created ? new Date(t.created) : null; } catch(e){}
+        if(!stStart||isNaN(stStart)||stStart>dlD){ stStart=new Date(dlD); stStart.setDate(stStart.getDate()-7); }
+        if(stStart<rangeStart) stStart=new Date(rangeStart);
+        const bx = Math.max(0,Math.ceil((stStart-rangeStart)/86400000))*DW;
+        const bEnd = Math.min(totalDays,Math.ceil((dlD-rangeStart)/86400000)+1)*DW;
+        const bw = Math.max(DW, bEnd-bx);
+        const bFill=isDone?'#10b981':isOD?'#ef4444':'#8b5cf6';
+        const bBg=isDone?'#a7f3d0':isOD?'#fecaca':'#ddd6fe';
+        // Vùng trễ task con
+        let stODExt='';
+        if(isOD){
+          const odSx=Math.min(totalDays,Math.ceil((dlD-rangeStart)/86400000)+1);
+          const odEx=Math.min(totalDays,Math.ceil((today-rangeStart)/86400000)+1);
+          const odW=Math.max(0,(odEx-odSx)*DW);
+          if(odW>0) stODExt=`<div style="position:absolute;left:${odSx*DW}px;top:7px;width:${odW}px;height:22px;background:repeating-linear-gradient(45deg,#fee2e2,#fee2e2 2px,#fecaca 2px,#fecaca 4px);border:1px dashed #ef4444;border-left:none;border-radius:0 3px 3px 0;"></div>`;
+        }
+        stBarHtml=`${stODExt}<div style="position:absolute;left:${bx}px;top:7px;width:${bw}px;height:22px;background:${bBg};border-radius:3px;overflow:hidden;border:1px solid ${bFill}60;">
+          <div style="width:${isDone?100:0}%;height:100%;background:${bFill};border-radius:2px;"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:5px;">
+            <span style="font-size:9px;font-weight:600;color:white;text-shadow:0 1px 1px rgba(0,0,0,.3);white-space:nowrap;">${esc(s.name.length>18?s.name.slice(0,16)+'…':s.name)}</span>
+          </div>
+        </div>`;
+      }
+      rightRows.push(`<div class="gantt-row-right" style="background:${sBg2};">${gridLines}${todayLine}${stBarHtml}</div>`);
+    });
+  });
+
+  // ── Legend ──
+  const legend=`<div style="display:flex;gap:14px;font-size:11px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+    <strong style="color:#374151;">Chú thích:</strong>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;background:#10b981;border-radius:2px;display:inline-block;"></span>Hoàn thành</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;background:#3b82f6;border-radius:2px;display:inline-block;"></span>Đang làm</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;background:#ef4444;border-radius:2px;display:inline-block;"></span>Quá hạn</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;background:#94a3b8;border-radius:2px;display:inline-block;"></span>Chưa làm</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:2px;height:14px;background:#ef4444;display:inline-block;"></span>Hôm nay</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:22px;height:10px;border:1.5px dashed #7c3aed;background:repeating-linear-gradient(90deg,#ddd6fe,#ddd6fe 3px,#ede9fe 3px,#ede9fe 6px);display:inline-block;border-radius:2px;"></span>Kéo dài theo task con</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:22px;height:10px;background:repeating-linear-gradient(45deg,#fee2e2,#fee2e2 2px,#fecaca 2px,#fecaca 4px);border:1px dashed #ef4444;display:inline-block;border-radius:2px;"></span>Vùng trễ hạn</span>
+    <span style="margin-left:auto;color:var(--gray-500);">Click vào dòng để xem chi tiết</span>
+  </div>`;
+
+  const timelineW = totalDays*DW;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">🗓 Tiến độ công việc – ${PROJECT_NAME}</h2>
+      <div style="font-size:12px;color:var(--gray-500);">${all.length} công việc · ${fmtVN(td)}</div>
+    </div>
+    ${legend}
+    <div class="gantt-wrap" style="max-height:calc(100vh - 260px);">
+      <!-- LEFT -->
+      <div class="gantt-left" style="width:${leftW}px;">
+        ${leftHdr}
+        <div style="overflow-y:auto;max-height:calc(100vh - 330px);" id="ganttLeftBody">
+          ${leftRows.join('')}
+        </div>
+      </div>
+      <!-- RIGHT -->
+      <div class="gantt-right" id="ganttRightScroll">
+        <div style="width:${timelineW}px;">
+          ${monthHdr}${dayHdr}
+          <div id="ganttRightBody" style="max-height:calc(100vh - 330px);overflow-y:auto;">
+            ${rightRows.join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Đồng bộ scroll trái-phải
+  const lb=document.getElementById('ganttLeftBody'), rb=document.getElementById('ganttRightBody');
+  if(lb&&rb){ lb.addEventListener('scroll',()=>rb.scrollTop=lb.scrollTop); rb.addEventListener('scroll',()=>lb.scrollTop=rb.scrollTop); }
+
+  // Cuộn đến hôm nay
+  const rs=document.getElementById('ganttRightScroll');
+  if(rs&&todayIdx>=0) rs.scrollLeft=Math.max(0,todayIdx*DW-200);
+}
+
+// ── DASHBOARD HIỆU SUẤT ──────────────────────────────────────
+function _memberStats() {
+  const td = todayStr();
+  const map = {};
+  tasks.forEach(t => {
+    const p = t.person || 'Không rõ';
+    if (!map[p]) map[p] = { name:p, total:0, truocHan:0, dungHan:0, treHan:0, doneNoDate:0,
+      dangLam:0, dangLamQuaHan:0, chuaLam:0, chuaLamQuaHan:0,
+      stTotal:0, stDone:0, dlPending:0, issues:0 };
+    const s = map[p];
+    s.total++;
+    const pf = perfOf(t);
+    if (t.status === 'Hoàn thành') {
+      if      (pf.key==='early')      s.truocHan++;
+      else if (pf.key==='ontime')     s.dungHan++;
+      else if (pf.key==='late')       s.treHan++;
+      else                            s.doneNoDate++;
+    } else if (t.status === 'Đang làm') {
+      s.dangLam++;
+      if (t.deadline && t.deadline < td) s.dangLamQuaHan++;
+    } else {
+      s.chuaLam++;
+      if (t.deadline && t.deadline < td) s.chuaLamQuaHan++;
+    }
+    s.stTotal += (t.subtasks||[]).length;
+    s.stDone  += (t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length;
+    if ((t.dlRequests||[]).some(r=>r.status==='pending')) s.dlPending++;
+    if (t.issue) s.issues++;
+  });
+  return map;
+}
+
+function _perfGrade(s) {
+  const done = s.truocHan + s.dungHan + s.treHan + s.doneNoDate;
+  if (!done) return { label:'Chưa có dữ liệu', color:'#6b7280', bg:'#f3f4f6', score:0 };
+  const score = Math.round((s.truocHan*3 + s.dungHan*2 + s.treHan*1) / (done*3) * 100);
+  if (score >= 90) return { label:'⭐ Xuất sắc',        color:'#065f46', bg:'#d1fae5', score };
+  if (score >= 70) return { label:'🟢 Tốt',             color:'#1e40af', bg:'#dbeafe', score };
+  if (score >= 50) return { label:'🟡 Trung bình',      color:'#92400e', bg:'#fef3c7', score };
+  return           { label:'🔴 Cần cải thiện',          color:'#991b1b', bg:'#fee2e2', score };
+}
+
+function _teamColor(name) {
+  if (name.startsWith('SM'))   return '#1a56db';
+  if (name.startsWith('SS'))   return '#7c3aed';
+  if (name.startsWith('SD'))   return '#0369a1';
+  if (name.startsWith('QSL'))  return '#065f46';
+  if (name.startsWith('QAQC'))return '#b45309';
+  if (name.startsWith('PD'))   return '#dc2626';
+  if (name.startsWith('PM'))   return '#1d4ed8';
+  if (name.startsWith('PC'))   return '#374151';
+  return '#6b7280';
+}
+
+function renderDashboard() {
+  const map = _memberStats();
+  const td = todayStr();
+  const ordered = MEMBERS.filter(m=>map[m]).concat(Object.keys(map).filter(k=>!MEMBERS.includes(k)&&map[k]));
+
+  // ── Tổng hợp toàn dự án ──
+  let gTotal=0,gDone=0,gOnTime=0,gLate=0,gOverdue=0,gIssue=0;
+  ordered.forEach(p=>{ const s=map[p]; gTotal+=s.total; gDone+=s.truocHan+s.dungHan+s.treHan+s.doneNoDate; gOnTime+=s.truocHan+s.dungHan; gLate+=s.treHan; gOverdue+=s.dangLamQuaHan+s.chuaLamQuaHan; gIssue+=s.issues; });
+  const gRate = gTotal ? Math.round(gDone/gTotal*100) : 0;
+  const gOtRate = gDone ? Math.round(gOnTime/gDone*100) : 0;
+
+  const summaryHtml = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+      ${[
+        ['📋','Tổng việc',gTotal,'#1a56db','#dbeafe'],
+        ['✓','Hoàn thành',gDone,'#065f46','#d1fae5'],
+        ['🎯','Đúng/Trước hạn',gOnTime,'#1d4ed8','#eff6ff'],
+        ['⚠','Trễ hạn',gLate,'#dc2626','#fee2e2'],
+        ['🔥','Đang quá hạn',gOverdue,'#b45309','#fef3c7'],
+        ['📊','Tỷ lệ hoàn thành',gRate+'%','#374151','#f3f4f6'],
+      ].map(([ic,lb,val,tc,bg])=>`
+        <div style="background:${bg};border-radius:10px;padding:12px 14px;text-align:center;">
+          <div style="font-size:18px;margin-bottom:3px;">${ic}</div>
+          <div style="font-size:11px;font-weight:600;color:${tc};margin-bottom:4px;">${lb}</div>
+          <div style="font-size:26px;font-weight:800;color:${tc};">${val}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // ── Cards từng thành viên ──
+  const memberCards = ordered.map(p => {
+    const s = map[p];
+    const g = _perfGrade(s);
+    const done = s.truocHan + s.dungHan + s.treHan + s.doneNoDate;
+    const rate = s.total ? Math.round(done/s.total*100) : 0;
+    const tc = _teamColor(p);
+    const overdue = s.dangLamQuaHan + s.chuaLamQuaHan;
+    // Progress bar gradient
+    const w1 = s.total ? Math.round(s.truocHan/s.total*100) : 0;
+    const w2 = s.total ? Math.round(s.dungHan/s.total*100) : 0;
+    const w3 = s.total ? Math.round(s.treHan/s.total*100) : 0;
+    const w4 = 100 - w1 - w2 - w3;
+    return `
+    <div style="background:white;border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+      <div style="background:${tc};padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="color:white;font-weight:700;font-size:14px;">${esc(p)}</div>
+          <div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:2px;">${s.total} công việc được giao</div>
+        </div>
+        <div style="background:${g.bg};color:${g.color};padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;">${g.label}</div>
+      </div>
+      <div style="padding:14px 16px;">
+        <!-- Progress bar nhiều màu -->
+        <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:10px;background:#e5e7eb;">
+          ${w1?`<div style="width:${w1}%;background:#059669;" title="Trước hạn"></div>`:''}
+          ${w2?`<div style="width:${w2}%;background:#3b82f6;" title="Đúng hạn"></div>`:''}
+          ${w3?`<div style="width:${w3}%;background:#ef4444;" title="Trễ hạn"></div>`:''}
+        </div>
+        <!-- Legend -->
+        <div style="display:flex;gap:10px;font-size:11px;margin-bottom:12px;flex-wrap:wrap;">
+          <span style="color:#059669;font-weight:600;">▋ Trước hạn: ${s.truocHan}</span>
+          <span style="color:#3b82f6;font-weight:600;">▋ Đúng hạn: ${s.dungHan}</span>
+          <span style="color:#ef4444;font-weight:600;">▋ Trễ hạn: ${s.treHan}</span>
+        </div>
+        <!-- Metrics grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+          <div style="background:#f0fdf4;border-radius:6px;padding:7px 10px;">
+            <div style="color:#6b7280;margin-bottom:2px;">✓ Hoàn thành</div>
+            <div style="font-weight:700;color:#065f46;font-size:18px;">${done} <span style="font-size:12px;font-weight:500;">(${rate}%)</span></div>
+          </div>
+          <div style="background:${overdue?'#fef3c7':'#f9fafb'};border-radius:6px;padding:7px 10px;">
+            <div style="color:#6b7280;margin-bottom:2px;">⚡ Quá hạn (chưa xong)</div>
+            <div style="font-weight:700;color:${overdue?'#b45309':'#374151'};font-size:18px;">${overdue}</div>
+          </div>
+          <div style="background:#f9fafb;border-radius:6px;padding:7px 10px;">
+            <div style="color:#6b7280;margin-bottom:2px;">◑ Đang làm</div>
+            <div style="font-weight:700;color:#1e40af;font-size:18px;">${s.dangLam}</div>
+          </div>
+          <div style="background:#f9fafb;border-radius:6px;padding:7px 10px;">
+            <div style="color:#6b7280;margin-bottom:2px;">○ Chưa làm</div>
+            <div style="font-weight:700;color:#92400e;font-size:18px;">${s.chuaLam}</div>
+          </div>
+        </div>
+        ${s.stTotal?`<div style="margin-top:8px;padding:6px 10px;background:#f5f3ff;border-radius:6px;font-size:11px;color:#5b21b6;">📌 Tasks con: ${s.stDone}/${s.stTotal} hoàn thành</div>`:''}
+        ${s.issues?`<div style="margin-top:6px;padding:5px 10px;background:#fffbeb;border-radius:6px;font-size:11px;color:#c27803;">⚠ Vướng mắc: ${s.issues} việc</div>`:''}
+        ${s.dlPending?`<div style="margin-top:6px;padding:5px 10px;background:#fef3c7;border-radius:6px;font-size:11px;color:#92400e;">⏳ Chờ duyệt dời deadline: ${s.dlPending}</div>`:''}
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:11px;color:#6b7280;">Điểm hiệu suất</div>
+          <div style="font-size:16px;font-weight:800;color:${g.color};">${g.score}/100</div>
+        </div>
+        <div style="height:5px;background:#e5e7eb;border-radius:3px;margin-top:4px;">
+          <div style="width:${g.score}%;height:5px;border-radius:3px;background:${g.color};"></div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('dashView').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">📈 Dashboard hiệu suất – ${PROJECT_NAME}</h2>
+      <div style="font-size:12px;color:var(--gray-500);">Cập nhật: ${new Date().toLocaleString('vi-VN')}</div>
+    </div>
+    ${summaryHtml}
+    <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:10px;display:flex;gap:12px;align-items:center;">
+      <span>▋ <span style="color:#059669">Trước hạn</span></span>
+      <span>▋ <span style="color:#3b82f6">Đúng hạn</span></span>
+      <span>▋ <span style="color:#ef4444">Trễ hạn</span></span>
+      <span style="margin-left:auto;font-size:11px;">Điểm: Trước hạn=3pt · Đúng hạn=2pt · Trễ hạn=1pt</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;">
+      ${memberCards.length ? memberCards.join('') : '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-500);">Chưa có dữ liệu</div>'}
+    </div>`;
 }
 
 function toggleAll(cb) { document.querySelectorAll('.row-check').forEach(c=>c.checked=cb.checked); }
@@ -673,31 +1306,47 @@ function exportCSV() {
   a.download=`giao-viec-${todayStr()}.csv`; a.click();
 }
 
-// ── CC MEMBERS ───────────────────────────────────────────────
+// ── CC MEMBERS (multi-select dropdown) ──────────────────────
 function renderCcMembers(selected) {
-  const grid = document.getElementById('ccGrid');
-  if (!grid) return;
+  const panel = document.getElementById('ccDropPanel');
+  if (!panel) return;
   const currentPerson = document.getElementById('f_person').value;
   const skip = new Set(['PC - Mr. Minh','PM - Mr. Kiên', currentPerson].filter(Boolean));
-  grid.innerHTML = MEMBERS.filter(m=>!skip.has(m)).map(m=>
-    `<label class="cc-row"><input type="checkbox" value="${esc(m)}" ${selected.includes(m)?'checked':''}> ${esc(m)}</label>`
+  panel.innerHTML = MEMBERS.filter(m=>!skip.has(m)).map(m=>
+    `<label class="cc-opt">
+      <input type="checkbox" value="${esc(m)}" ${selected.includes(m)?'checked':''}>
+      <span>${esc(m)}</span>
+    </label>`
   ).join('');
-  grid.querySelectorAll('input').forEach(cb=>cb.addEventListener('change', _updateCcSelected));
+  panel.querySelectorAll('input').forEach(cb => cb.addEventListener('change', _updateCcSelected));
   _updateCcSelected();
+}
+
+function toggleCcDrop(e) {
+  e && e.stopPropagation();
+  document.getElementById('ccDropPanel').classList.toggle('open');
 }
 
 function _updateCcSelected() {
   const sel = getCcSelected();
-  const el = document.getElementById('ccSelected');
+  const lbl = document.getElementById('ccDropLabel');
+  const el  = document.getElementById('ccSelected');
+  if (lbl) lbl.textContent = sel.length ? `${sel.length} người được chọn` : 'Chọn người nhận thêm...';
   if (!el) return;
   el.innerHTML = sel.length
     ? sel.map(m=>`<span class="cc-chip">${esc(m)}</span>`).join('')
-    : '<span style="font-size:11px;color:var(--gray-500);">PC & PM luôn được Cc mặc định</span>';
+    : '<span style="font-size:11px;color:var(--gray-500);">PC &amp; PM luôn được Cc mặc định</span>';
 }
 
 function getCcSelected() {
-  return [...document.querySelectorAll('#ccGrid input:checked')].map(cb=>cb.value);
+  return [...document.querySelectorAll('#ccDropPanel input:checked')].map(cb=>cb.value);
 }
+
+// Đóng CC dropdown khi click ra ngoài
+document.addEventListener('click', () => {
+  const p = document.getElementById('ccDropPanel');
+  if (p) p.classList.remove('open');
+});
 
 // ── INFO MODAL WITH TABS ─────────────────────────────────────
 let _infoTaskId = null;
@@ -774,6 +1423,18 @@ function _infoDetail(t) {
     </div>`;
 }
 
+function _stDeadlineBadge(s) {
+  if (!s.deadline) return '';
+  if (s.status==='Hoàn thành') return `<span style="font-size:11px;color:#059669;">✓ Xong ${fmtVN(s.doneDate||'')}</span>`;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dl=new Date(s.deadline); dl.setHours(23,59,59,999);
+  const diff=Math.ceil((dl-today)/86400000);
+  if (diff<0) return `<span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700;">Trễ ${Math.abs(diff)} ngày</span>`;
+  if (diff===0) return `<span style="background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700;">Hôm nay!</span>`;
+  if (diff<=2) return `<span style="background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:8px;font-size:11px;">⚡ ${fmtVN(s.deadline)}</span>`;
+  return `<span style="font-size:11px;color:var(--gray-500);">📅 ${fmtVN(s.deadline)}</span>`;
+}
+
 function _infoSubtasks(t) {
   const sts = t.subtasks||[];
   const done=sts.filter(s=>s.status==='Hoàn thành').length, total=sts.length;
@@ -785,7 +1446,11 @@ function _infoSubtasks(t) {
         onchange="toggleSubtask('${t.id}','${s.id}',this.checked)">
       <div style="flex:1;min-width:0;">
         <div class="st-name">${esc(s.name)}</div>
-        <div class="st-meta">${s.doneDate?'✓ Xong: '+fmtVN(s.doneDate):''} ${s.note?'· <span style="color:#c27803;">'+esc(s.note)+'</span>':''} <span style="color:var(--gray-200);margin-left:6px;">Thêm: ${s.createdAt||''}</span></div>
+        <div class="st-meta" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px;">
+          ${_stDeadlineBadge(s)}
+          ${s.note?`<span style="color:#c27803;font-size:11px;">⚠ ${esc(s.note)}</span>`:''}
+          <span style="color:var(--gray-200);font-size:10px;">Thêm: ${s.createdAt||''}</span>
+        </div>
       </div>
       <button onclick="delSubtask('${t.id}','${s.id}')" style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:14px;padding:0 4px;flex-shrink:0;">✕</button>
     </div>`).join(''):'<div style="text-align:center;padding:20px;color:var(--gray-500);">Chưa có task con nào.</div>';
@@ -795,10 +1460,11 @@ function _infoSubtasks(t) {
     </div><span style="font-size:12px;font-weight:700;color:${pc};white-space:nowrap;">${done}/${total} hoàn thành (${pct}%)</span></div>`:'';
   return `${progressHtml}<div>${stHtml}</div>
     <div style="border-top:1px dashed var(--gray-200);margin-top:12px;padding-top:12px;">
-      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">＋ Thêm task mới</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <input type="text" id="newStName" placeholder="Tên task..." style="flex:1;min-width:150px;font-size:13px;">
-        <input type="text" id="newStNote" placeholder="Ghi chú..." style="flex:1;min-width:100px;font-size:13px;">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">＋ Thêm task con mới</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;align-items:center;">
+        <input type="text" id="newStName" placeholder="Tên task con..." style="font-size:13px;">
+        <input type="date" id="newStDeadline" title="Deadline task con" style="font-size:13px;">
+        <input type="text" id="newStNote" placeholder="Ghi chú..." style="font-size:13px;">
         <button class="btn btn-primary btn-sm" onclick="addSubtask('${t.id}')">＋ Thêm</button>
       </div>
     </div>`;
@@ -837,15 +1503,36 @@ function _infoDlReq(t) {
 // ── SUB-TASKS ────────────────────────────────────────────────
 function addSubtask(taskId) {
   const name=(document.getElementById('newStName')||{}).value?.trim();
-  if (!name) { toast('Nhập tên task', 'err'); return; }
+  if (!name) { toast('Nhập tên task con', 'err'); return; }
+  const deadline=(document.getElementById('newStDeadline')||{}).value||'';
   const note=(document.getElementById('newStNote')||{}).value?.trim()||'';
   const ti=tasks.findIndex(t=>String(t.id)===String(taskId));
   if (ti<0) return;
   if (!tasks[ti].subtasks) tasks[ti].subtasks=[];
-  tasks[ti].subtasks.push({ id:String(Date.now()), name, note, status:'Chưa làm', doneDate:'', createdAt:fmtVN(todayStr()) });
+  tasks[ti].subtasks.push({ id:String(Date.now()), name, deadline, note, status:'Chưa làm', doneDate:'', createdAt:fmtVN(todayStr()) });
   saveTasks(); render();
   _renderInfoModal(tasks[ti], 'subtasks');
-  toast('Đã thêm task: '+name, 'ok');
+  toast('Đã thêm task con: '+name, 'ok');
+}
+
+function openQuickAddSt(taskId) {
+  _addingStTo = (_addingStTo === taskId) ? null : taskId;
+  _stOpen[taskId] = true;
+  render();
+  setTimeout(() => document.getElementById('qaStName_' + taskId)?.focus(), 60);
+}
+function submitQuickAddSt(taskId) {
+  const name = (document.getElementById('qaStName_'+taskId)||{}).value?.trim();
+  if (!name) { toast('Nhập tên task con!', 'err'); return; }
+  const deadline = (document.getElementById('qaStDeadline_'+taskId)||{}).value || '';
+  const ti = tasks.findIndex(t=>String(t.id)===String(taskId));
+  if (ti<0) return;
+  if (!tasks[ti].subtasks) tasks[ti].subtasks = [];
+  tasks[ti].subtasks.push({ id:String(Date.now()), name, deadline, note:'', status:'Chưa làm', doneDate:'', createdAt:fmtVN(todayStr()) });
+  _stOpen[taskId] = true;
+  _addingStTo = null;
+  saveTasks(); render();
+  toast('✅ Đã thêm task con: ' + name, 'ok');
 }
 
 function toggleSubtask(taskId, stId, checked) {
@@ -927,6 +1614,87 @@ function confirmDlReview() {
   toast(approved?'✓ Đã duyệt – deadline: '+fmtVN(tasks[ti].deadline):'✗ Đã từ chối', approved?'ok':'err');
   _renderInfoModal(tasks[ti], 'dlreq');
   _dlRevCtx=null;
+}
+
+// ── THÔNG BÁO ────────────────────────────────────────────────
+function openNotice() {
+  // Render TẤT CẢ thành viên (kể cả PM, PC) vào dropdown
+  const panel = document.getElementById('noticeRecipGrid');
+  panel.innerHTML = MEMBERS.map(m => {
+    const isPmPc = m==='PM - Mr. Kiên'||m==='PC - Mr. Minh';
+    return `<label class="cc-opt">
+      <input type="checkbox" value="${esc(m)}" onchange="_updateNoticeRecip()">
+      <span>${esc(m)}${isPmPc?' <span style="font-size:10px;color:#1a56db;font-weight:600;">(mặc định Cc)</span>':''}</span>
+    </label>`;
+  }).join('');
+  panel.classList.remove('open');
+  _updateNoticeRecip();
+  document.getElementById('n_title').value='';
+  document.getElementById('n_content').value='';
+  document.getElementById('n_doc').value='';
+  document.getElementById('noticeOverlay').classList.add('open');
+}
+
+function closeNotice() {
+  document.getElementById('noticeOverlay').classList.remove('open');
+  const p=document.getElementById('noticeRecipGrid');
+  if(p) p.classList.remove('open');
+}
+
+function toggleNoticeDrop(e) {
+  e && e.stopPropagation();
+  document.getElementById('noticeRecipGrid').classList.toggle('open');
+}
+
+function _updateNoticeRecip() {
+  const sel=[...document.querySelectorAll('#noticeRecipGrid input:checked')].map(c=>c.value);
+  const lbl=document.getElementById('noticeDropLabel');
+  const el=document.getElementById('noticeRecipSelected');
+  if(lbl) lbl.textContent = sel.length ? `${sel.length} người được chọn` : 'Chọn người nhận...';
+  if(!el) return;
+  el.innerHTML = sel.length
+    ? sel.map(m=>`<span class="cc-chip">${esc(m)}</span>`).join('')
+    : '<span style="font-size:11px;color:var(--gray-500);">Chưa chọn người nhận</span>';
+}
+
+function sendNotice() {
+  const title=document.getElementById('n_title').value.trim();
+  const content=document.getElementById('n_content').value.trim();
+  const doc=document.getElementById('n_doc').value.trim();
+  const recipients=[...document.querySelectorAll('#noticeRecipGrid input:checked')].map(c=>c.value);
+  if (!title) { toast('Nhập tiêu đề thông báo', 'err'); return; }
+  if (!content) { toast('Nhập nội dung thông báo', 'err'); return; }
+  if (!recipients.length) { toast('Chọn ít nhất 1 người nhận', 'err'); return; }
+
+  // Lưu vào localStorage (không tracking deadline)
+  const notices = JSON.parse(localStorage.getItem('bch_notices')||'[]');
+  notices.unshift({ id:String(Date.now()), title, content, doc, recipients,
+    sentAt: new Date().toLocaleString('vi-VN'), sender:'PC - Mr. Minh' });
+  localStorage.setItem('bch_notices', JSON.stringify(notices.slice(0,200)));
+
+  // Gửi email qua Apps Script
+  if (WA_URL) {
+    fetch(WA_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'sendNotice',
+        notice: { title, content, doc, recipients, sender: 'PC - Mr. Minh' },
+        token: SECRET_TOKEN
+      })
+    }).then(r => r.json()).then(j => {
+      if (j.ok && j.message && j.message.includes('thông báo')) {
+        toast('✓ Đã gửi email thông báo đến ' + recipients.length + ' người', 'ok');
+      } else if (j.ok) {
+        toast('⚠ Script chưa cập nhật – vui lòng re-deploy Apps Script rồi thử lại', 'err');
+      } else {
+        toast('Lỗi: ' + (j.error || 'Không xác định'), 'err');
+      }
+    }).catch(() => {
+      toast('Không kết nối được Apps Script – kiểm tra WA_URL', 'err');
+    });
+  } else { toast('Đã lưu thông báo (WA_URL chưa cài – email chưa gửi)', 'err'); }
+
+  closeNotice();
 }
 
 // ── LOGIC ĐÁNH GIÁ TRƯỚC HẠN / ĐÚNG HẠN / TRỄ HẠN ────────────
@@ -1094,7 +1862,7 @@ function toast(msg, type='') {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeModal(); closeInfo(); closeDlRev(); closeEval(); }
+  if (e.key==='Escape') { closeModal(); closeInfo(); closeDlRev(); closeEval(); closeNotice(); }
   if (e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('open') && e.target.tagName!=='TEXTAREA') { e.preventDefault(); saveTask(); }
 });
 </script>
