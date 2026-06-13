@@ -1115,12 +1115,12 @@ function renderGantt() {
 
   // ── LEFT PANEL config ──
   const COLS = [
-    {id:'stt',  label:'#',            w:32},
-    {id:'name', label:'Tên công việc',w:200},
-    {id:'who',  label:'Người PT',     w:120},
-    {id:'dl',   label:'Deadline',     w:88},
-    {id:'st',   label:'Trạng thái',   w:80},
-    {id:'pg',   label:'TĐ%',          w:48},
+    {id:'stt',  label:'STT',              w:40},
+    {id:'name', label:'Tên công việc',    w:200},
+    {id:'who',  label:'Người phụ trách', w:120},
+    {id:'dl',   label:'Deadline',         w:88},
+    {id:'st',   label:'Trạng thái',       w:88},
+    {id:'pg',   label:'TĐ%',              w:48},
   ];
   const leftW = COLS.reduce((s,c)=>s+c.w,0);
 
@@ -1149,7 +1149,7 @@ function renderGantt() {
   const sIcon={'Chưa làm':'○','Đang làm':'◑','Hoàn thành':'✓'};
   const combinedRows=[];
   const LW = leftW; // alias
-  const lcStyle = (bg) => `display:flex;align-items:stretch;flex-shrink:0;width:${LW}px;position:sticky;left:0;z-index:2;background:${bg};border-right:2px solid #1a56db;box-shadow:2px 0 4px rgba(0,0,0,.06);`;
+  const lcStyle = (bg) => `display:flex;align-items:stretch;flex-shrink:0;width:${LW}px;min-height:${RH}px;position:sticky;left:0;z-index:2;background:${bg};border-right:2px solid #1a56db;box-shadow:2px 0 4px rgba(0,0,0,.06);`;
 
   all.forEach((t,i)=>{
     const isOverdue = t.deadline&&t.deadline<td&&t.status!=='Hoàn thành';
@@ -1251,24 +1251,30 @@ function renderGantt() {
 
     // ── Task con dưới task mẹ ──
     const sts = t.subtasks || [];
-    sts.forEach(s => {
+    sts.forEach((s, si) => {
       const isDone = s.status==='Hoàn thành';
       const isOD   = s.deadline && s.deadline < td && !isDone;
-      const sColor = isDone?'#065f46':isOD?'#dc2626':'#374151';
-      const sBg2   = isDone?'#f0fdf4':isOD?'#fff1f2':'#f5f3ff';
+      const isDang = s.status==='Đang làm';
+      const sColor = isDone?'#065f46':isOD?'#dc2626':isDang?'#1e40af':'#92400e';
+      const sBg2   = isDone?'#f0fdf4':isOD?'#fff1f2':isDang?'#eff6ff':'#f5f3ff';
+      const stStt  = `${i+1}.${si+1}`;  // e.g. "4.1"
+      const stProg2 = Math.max(0,Math.min(100,parseInt(s.progress)||0));
+      const stStatusLabel = isDone?'✓ Xong':isOD?'⚠ Trễ':isDang?'◑ Làm':'○ Chờ';
+      const stBorderColor = isDone?'#a7f3d0':isOD?'#fecaca':isDang?'#93c5fd':'#c4b5fd';
+      const stPerson = (s.person||t.person||'').replace(/^(PD|PM|PC|SM|SS|SD|QSL|QSM|QAQC|Thư ký)\s*-\s*/,'');
 
       const _stLeftHtml = `
-        <div style="width:${COLS[0].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#c4b5fd;">└</div>
-        <div style="width:${COLS[1].w}px;flex-shrink:0;padding:0 8px 0 20px;border-right:1px solid #e5e7eb;display:flex;align-items:center;gap:6px;overflow:hidden;">
-          <input type="checkbox" ${isDone?'checked':''} onchange="toggleSubtask('${t.id}','${s.id}',this.checked);renderGantt();" style="width:13px;height:13px;accent-color:#7c3aed;cursor:pointer;flex-shrink:0;">
+        <div style="width:${COLS[0].w}px;flex-shrink:0;padding:0 2px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#7c3aed;letter-spacing:-.3px;">${stStt}</div>
+        <div style="width:${COLS[1].w}px;flex-shrink:0;padding:0 6px 0 14px;border-right:1px solid #e5e7eb;display:flex;align-items:center;gap:4px;overflow:hidden;">
+          <span style="color:#c4b5fd;font-size:10px;flex-shrink:0;">└</span>
           <span style="font-size:11px;font-weight:500;color:${sColor};${isDone?'text-decoration:line-through;':''}white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(s.name)}">${esc(s.name)}</span>
         </div>
-        <div style="width:${COLS[2].w}px;flex-shrink:0;border-right:1px solid #e5e7eb;"></div>
+        <div style="width:${COLS[2].w}px;flex-shrink:0;padding:0 5px;border-right:1px solid #e5e7eb;display:flex;align-items:center;font-size:10px;color:#6b7280;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="${esc(s.person||t.person||'')}">${esc(stPerson)}</div>
         <div style="width:${COLS[3].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:${isOD?'700':'400'};color:${isOD?'#dc2626':'#6b7280'};">${s.deadline?fmtVN(s.deadline):'–'}</div>
-        <div style="width:${COLS[4].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">
-          <span style="font-size:9px;font-weight:700;color:${sColor};background:${sBg2};padding:1px 4px;border-radius:6px;border:1px solid ${isDone?'#a7f3d0':isOD?'#fecaca':'#c4b5fd'};">${isDone?'✓':isOD?'⚠':'○'}</span>
+        <div style="width:${COLS[4].w}px;flex-shrink:0;padding:0 3px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:9px;font-weight:700;color:${sColor};background:${sBg2};padding:1px 5px;border-radius:6px;border:1px solid ${stBorderColor};white-space:nowrap;">${stStatusLabel}</span>
         </div>
-        <div style="width:${COLS[5].w}px;flex-shrink:0;"></div>
+        <div style="width:${COLS[5].w}px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${isDone?'#059669':isDang?'#1a56db':'#7c3aed'};">${stProg2}%</div>
       `;
 
       // Bar cho task con – bắt đầu từ ngày tạo task con (createdDateISO), fallback deadline-7
@@ -1289,7 +1295,9 @@ function renderGantt() {
         const stProg = Math.max(0,Math.min(100,parseInt(s.progress)||0));
         const bx = Math.max(0,Math.ceil((stStart-rangeStart)/86400000))*DW;
         const bEnd = Math.min(totalDays,Math.ceil((dlD-rangeStart)/86400000)+1)*DW;
-        const bw = Math.max(DW, bEnd-bx);
+        const bwRaw = bEnd - bx;
+        if (bwRaw <= 0) { stBarHtml=''; } // deadline before timeline start — skip bar
+        const bw = Math.max(DW, bwRaw);
         const bFill=isDone?'#10b981':isOD?'#ef4444':'#8b5cf6';
         const bBg=isDone?'#a7f3d0':isOD?'#fecaca':'#ddd6fe';
         // Vùng trễ task con
@@ -1298,16 +1306,18 @@ function renderGantt() {
           const odSx=Math.min(totalDays,Math.ceil((dlD-rangeStart)/86400000)+1);
           const odEx=Math.min(totalDays,Math.ceil((today-rangeStart)/86400000)+1);
           const odW=Math.max(0,(odEx-odSx)*DW);
-          if(odW>0) stODExt=`<div style="position:absolute;left:${odSx*DW}px;top:7px;width:${odW}px;height:22px;background:repeating-linear-gradient(45deg,#fee2e2,#fee2e2 2px,#fecaca 2px,#fecaca 4px);border:1px dashed #ef4444;border-left:none;border-radius:0 3px 3px 0;"></div>`;
+          if(odW>0) stODExt=`<div style="position:absolute;left:${odSx*DW}px;top:8px;width:${odW}px;height:26px;background:repeating-linear-gradient(45deg,#fee2e2,#fee2e2 2px,#fecaca 2px,#fecaca 4px);border:1px dashed #ef4444;border-left:none;border-radius:0 4px 4px 0;"></div>`;
         }
-        stBarHtml=`${stODExt}<div style="position:absolute;left:${bx}px;top:7px;width:${bw}px;height:22px;background:${bBg};border-radius:3px;overflow:hidden;border:1px solid ${bFill}60;">
-          <div style="width:${stProg}%;height:100%;background:${bFill};border-radius:2px;"></div>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:5px;">
-            <span style="font-size:9px;font-weight:600;color:white;text-shadow:0 1px 1px rgba(0,0,0,.3);white-space:nowrap;">${esc(s.name.length>18?s.name.slice(0,16)+'…':s.name)} ${stProg}%</span>
+        const stLabel = isDone?'✓ Xong':isOD?'⚠ Trễ hạn':isDang?'◑ Đang làm':'○ Chưa làm';
+        stBarHtml=`${stODExt}<div style="position:absolute;left:${bx}px;top:8px;width:${bw}px;height:26px;background:${bBg};border-radius:4px;overflow:hidden;border:1px solid ${bFill}60;">
+          <div style="width:${stProg}%;height:100%;background:${bFill};border-radius:3px 0 0 3px;"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 6px;gap:4px;">
+            <span style="font-size:9px;font-weight:700;color:white;text-shadow:0 1px 2px rgba(0,0,0,.4);white-space:nowrap;flex:1;overflow:hidden;text-overflow:ellipsis;">${stStt} ${stLabel}</span>
+            <span style="font-size:9px;font-weight:700;color:white;text-shadow:0 1px 2px rgba(0,0,0,.4);white-space:nowrap;flex-shrink:0;">${stProg}%</span>
           </div>
         </div>`;
       }
-      combinedRows.push(`<div class="gantt-row" style="background:${sBg2};border-left:3px solid ${isDone?'#10b981':isOD?'#ef4444':'#7c3aed'};">
+      combinedRows.push(`<div class="gantt-row" style="background:${sBg2};min-height:${RH}px;">
         <div style="${lcStyle(sBg2)}">${_stLeftHtml}</div>
         <div class="gantt-rc" style="width:${timelineW}px;min-height:${RH}px;">${gridLines}${todayLine}${stBarHtml}</div>
       </div>`);
