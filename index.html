@@ -560,6 +560,7 @@ function _mergeWithLocal(serverTasks) {
         subtasks:      local.subtasks      || [],   // giữ task con từ local
         statusHistory: local.statusHistory || [],   // giữ lịch sử từ local
         dlRequests:    local.dlRequests    || [],   // giữ yêu cầu dời hạn từ local
+        // serverHistory luôn lấy từ server (st đã có sẵn sau spread)
       };
     }
     return st; // task mới từ server, chưa có local
@@ -2361,7 +2362,15 @@ function _renderInfoDetail(id, tab) {
     </div>`;
 
   // ── NỘI DUNG LỊCH SỬ (narrative timeline) ──
-  const hist = t.statusHistory || [];
+  // Merge: local statusHistory + serverHistory từ GAS (sự kiện server-side)
+  const _localHist = t.statusHistory || [];
+  const _serverHist = t.serverHistory || [];
+  // Server types: SEND_TASK, REQUEST_DL, APPROVE_DL, REJECT_DL, COMPLETE_TASK
+  // Chỉ thêm server event nếu cùng type chưa có trong local
+  const _localTypes = new Set(_localHist.map(h => h.type));
+  const _serverOnly = ['SEND_TASK','REQUEST_DL','APPROVE_DL','REJECT_DL','COMPLETE_TASK'];
+  const _toAdd = _serverHist.filter(sh => _serverOnly.includes(sh.type) && !_localTypes.has(sh.type));
+  const hist = [..._localHist, ..._toAdd].sort((a,b) => (a.tsRaw||0)-(b.tsRaw||0));
   const histHtml = hist.length ? `
     <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">${hist.length} sự kiện · Sắp xếp mới nhất trước</div>
     <div>${[...hist].reverse().map((h, i, arr) => {
@@ -2562,6 +2571,16 @@ function _narrativeHtml(h, t) {
       const early = d>0;
       return `<b>Hệ thống đánh giá:</b> Hoàn thành <span style="color:${early?'#059669':'#dc2626'};font-weight:700;">${early?'TRƯỚC HẠN':'TRỄ HẠN'} ${Math.abs(d)} ngày</span>`;
     }
+    case 'SEND_TASK':
+      return `<b>Hệ thống</b> đã gửi <span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;">📧 Email giao việc</span> đến <b>${esc(t.person||'')}</b>`;
+    case 'REQUEST_DL':
+      return `<b>${esc(t.person||'')}</b> gửi yêu cầu <span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;">⏳ Xin dời deadline</span>${h.dlCu?` từ <span style="color:#dc2626;text-decoration:line-through;">${esc(h.dlCu)}</span>`:''} ${h.dlMoi?`→ <b style="color:#1a56db;">${esc(h.dlMoi)}</b>`:''} ${h.lyDo?`· Lý do: <i>${esc(h.lyDo)}</i>`:''}`;
+    case 'APPROVE_DL':
+      return `<b>PM/PC</b> đã <span style="background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;">✅ DUYỆT</span> yêu cầu dời deadline${h.dlMoi?` · Deadline mới: <b style="color:#059669;">${esc(h.dlMoi)}</b>`:''}`;
+    case 'REJECT_DL':
+      return `<b>PM/PC</b> đã <span style="background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;">❌ TỪ CHỐI</span> yêu cầu dời deadline · Deadline giữ nguyên`;
+    case 'COMPLETE_TASK':
+      return `<b>${esc(h.person||t.person||'')}</b> đã báo cáo <span style="background:#d1fae5;color:#065f46;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:600;">✅ Hoàn thành công việc</span>`;
     default:
       // Tương thích với log cũ (không có type)
       if(h.msg) return esc(h.msg);
@@ -2583,6 +2602,12 @@ function _eventMeta(type) {
     SUBTASK_UPDATED:  {icon:'🔗', dot:'#6d28d9', bg:'#f3e8ff'},
     CLOSE_TASK:       {icon:'✅', dot:'#059669', bg:'#d1fae5'},
     EVALUATE_TASK:    {icon:'⭐', dot:'#b45309', bg:'#fef3c7'},
+    // Server-side events từ GAS
+    SEND_TASK:        {icon:'📧', dot:'#1a56db', bg:'#dbeafe'},
+    REQUEST_DL:       {icon:'⏳', dot:'#d97706', bg:'#fef3c7'},
+    APPROVE_DL:       {icon:'✅', dot:'#059669', bg:'#d1fae5'},
+    REJECT_DL:        {icon:'❌', dot:'#991b1b', bg:'#fee2e2'},
+    COMPLETE_TASK:    {icon:'🏁', dot:'#059669', bg:'#d1fae5'},
   };
   return map[type] || {icon:'📋', dot:'#6b7280', bg:'#f3f4f6'};
 }
