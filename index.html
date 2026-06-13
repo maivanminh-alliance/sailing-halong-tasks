@@ -247,9 +247,13 @@
       </div>
       <div class="field-row">
         <div class="field-group"><label class="field-label">Trạng thái</label>
-          <select id="f_status"><option>Chưa làm</option><option>Đang làm</option><option>Hoàn thành</option></select>
+          <select id="f_status" onchange="autoFillDoneDate()"><option>Chưa làm</option><option>Đang làm</option><option>Hoàn thành</option></select>
         </div>
         <div class="field-group"><label class="field-label">Tiến độ (%)</label><input type="text" id="f_progress" placeholder="0"></div>
+      </div>
+      <div class="field-group" id="doneGroup" style="display:none;">
+        <label class="field-label">Ngày hoàn thành</label>
+        <input type="date" id="f_doneDate">
       </div>
       <div class="field-group"><label class="field-label">Ghi chú / Nội dung</label><textarea id="f_note" placeholder="Mô tả công việc..."></textarea></div>
       <div class="field-group"><label class="field-label">Vướng mắc</label><textarea id="f_issue" placeholder="Vấn đề cần báo cáo..." style="min-height:50px"></textarea></div>
@@ -385,12 +389,14 @@ async function loadFromSheet() {
       return String(v);
     };
     const parsed = j.table.rows.filter(r => r.c && r.c[1] && r.c[1].v).map((r,idx) => {
+      const status   = get(r,'Trạng thái')||'Chưa làm';
+      const doneDate = parseGvizDate(get(r,'Ngày hoàn thành'));
       return { id:get(r,'ID')||(idx+1), name:get(r,'Tên công việc'), person:get(r,'Người phụ trách'),
         category:get(r,'Nội dung'), priority:get(r,'Ưu tiên')||'Trung bình',
-        deadline:parseGvizDate(get(r,'Deadline')), status:get(r,'Trạng thái')||'Chưa làm',
+        deadline:parseGvizDate(get(r,'Deadline')), status,
         progress:parseInt(get(r,'Tiến độ (%)'))||0,
         note:get(r,'Ghi chú'), issue:get(r,'Vướng mắc'), doc:get(r,'Tài liệu'),
-        result:get(r,'Kết quả / Báo cáo'), doneDate:parseGvizDate(get(r,'Ngày hoàn thành')) };
+        result:get(r,'Kết quả / Báo cáo'), doneDate };
     });
     if (parsed.length) { tasks = parsed; saveTasks(); }
     render(); setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
@@ -408,16 +414,23 @@ async function saveTask() {
   if (!name)   { toast('Nhập tên công việc', 'err'); return; }
   if (!person) { toast('Chọn người phụ trách', 'err'); return; }
 
+  const status   = document.getElementById('f_status').value;
+  const progress = parseInt(document.getElementById('f_progress').value)||0;
+  // Tự điền ngày hoàn thành nếu đổi sang Hoàn thành và chưa có ngày
+  let doneDate = document.getElementById('f_doneDate').value;
+  if (status === 'Hoàn thành' && !doneDate) doneDate = todayStr();
+  if (status !== 'Hoàn thành') doneDate = '';   // reset nếu đổi lại chưa xong
+
   const task = {
     id: editId, name, person,
     category: document.getElementById('f_category').value,
     priority: document.getElementById('f_priority').value,
     deadline: document.getElementById('f_deadline').value,
-    status:   document.getElementById('f_status').value,
-    progress: parseInt(document.getElementById('f_progress').value)||0,
+    status, progress,
     note:     document.getElementById('f_note').value.trim(),
     issue:    document.getElementById('f_issue').value.trim(),
     doc:      document.getElementById('f_doc').value.trim(),
+    doneDate,
   };
 
   setBtnLoading(true);
@@ -469,11 +482,21 @@ function openModal(id) {
   document.getElementById('f_note').value     = t?.note     || '';
   document.getElementById('f_issue').value    = t?.issue    || '';
   document.getElementById('f_doc').value      = t?.doc      || '';
+  document.getElementById('f_doneDate').value = t?.doneDate ? (t.doneDate||'').slice(0,10) : '';
+  autoFillDoneDate();
   document.getElementById('modalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('f_name').focus(), 80);
 }
 function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
 function closeModalOutside(e) { if (e.target.id==='modalOverlay') closeModal(); }
+
+function autoFillDoneDate() {
+  const done = document.getElementById('f_status').value === 'Hoàn thành';
+  document.getElementById('doneGroup').style.display = done ? '' : 'none';
+  if (done && !document.getElementById('f_doneDate').value) {
+    document.getElementById('f_doneDate').value = todayStr();
+  }
+}
 
 // ── RENDER ────────────────────────────────────────────────────
 function getFiltered() {
