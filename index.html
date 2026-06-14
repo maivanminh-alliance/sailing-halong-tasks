@@ -43,6 +43,10 @@
   .search-wrap { padding:0 20px 8px; }
   .search-wrap input { width:100%; }
   .table-wrap { padding:0 20px 32px; overflow-x:auto; }
+  /* Cố định bề rộng cột: CÔNG VIỆC rộng, các cột khác gọn lại */
+  .table-wrap table { table-layout:fixed; min-width:1585px; }
+  .table-wrap td, .table-wrap th { padding:9px 9px; }
+  .table-wrap td:first-child { white-space:normal; word-break:break-word; }
   .cf-th { cursor:pointer; user-select:none; position:relative; }
   .cf-th:hover { color:var(--primary); }
   .cf-th .cf-caret { font-size:9px; color:var(--gray-300); margin-left:2px; }
@@ -226,6 +230,11 @@
 <!-- TABLE -->
 <div class="table-wrap">
   <table>
+    <colgroup>
+      <col style="width:320px"><col style="width:120px"><col style="width:95px"><col style="width:95px">
+      <col style="width:90px"><col style="width:105px"><col style="width:100px"><col style="width:105px">
+      <col style="width:90px"><col style="width:120px"><col style="width:85px"><col style="width:130px"><col style="width:130px">
+    </colgroup>
     <thead>
       <tr>
         <th class="cf-th" onclick="toggleColFilter('name',event)">Công việc <span class="cf-caret">▾</span>
@@ -673,12 +682,26 @@ function updateHeaderClock(){
   if (dt) dt.textContent = `${_viWeekday(now)}, ${p2(now.getDate())}/${p2(now.getMonth()+1)}/${now.getFullYear()}`;
 }
 
+// Mở link kèm ?report=<ID> (từ nút trong email) → tự bung form Báo cáo công việc đúng việc đó
+function handleDeepLink() {
+  let id = null;
+  try {
+    const params = new URLSearchParams(location.search);
+    id = params.get('report');
+    if (!id && location.hash) { const m = location.hash.match(/report=([^&]+)/); if (m) id = decodeURIComponent(m[1]); }
+  } catch(e) {}
+  if (!id) return;
+  const t = tasks.find(x => String(x.id) === String(id));
+  if (t) { openReport(t.id); }
+  else { toast('Không tìm thấy công việc (mã ' + id + '). Hãy bấm ↻ Đồng bộ rồi thử lại.', 'err'); }
+}
+
 window.onload = () => {
   const tl = document.getElementById('todayLabel'); if (tl) tl.textContent = fmtVN(todayStr());
   updateHeaderClock();
   setInterval(updateHeaderClock, 1000);
   setView('list');
-  loadFromSheet();
+  loadFromSheet().then(handleDeepLink);
 };
 
 function saveWaUrl() {
