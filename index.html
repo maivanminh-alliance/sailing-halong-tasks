@@ -47,6 +47,7 @@
   .table-wrap table { table-layout:fixed; min-width:1585px; }
   .table-wrap td, .table-wrap th { padding:9px 9px; }
   .table-wrap td:first-child { white-space:normal; word-break:break-word; }
+  .table-wrap th { white-space:normal; line-height:1.2; letter-spacing:.2px; vertical-align:middle; }
   .cf-th { cursor:pointer; user-select:none; position:relative; }
   .cf-th:hover { color:var(--primary); }
   .cf-th .cf-caret { font-size:9px; color:var(--gray-300); margin-left:2px; }
@@ -217,10 +218,9 @@
   <button class="btn" onclick="openNotice()" style="background:#0369a1;color:white;font-weight:600;">+ Thông báo công việc</button>
   <div style="display:flex;gap:4px;background:var(--gray-100);border-radius:var(--radius);padding:3px;">
     <button id="btnList" class="btn" onclick="setView('list')" style="padding:6px 12px;font-size:13px;">1. Danh sách</button>
-    <button id="btnPerson" class="btn" onclick="setView('person')" style="padding:6px 12px;font-size:13px;">2. Theo thành viên</button>
+    <button id="btnGantt" class="btn" onclick="setView('gantt')" style="padding:6px 12px;font-size:13px;">2. Tiến độ</button>
     <button id="btnDash" class="btn" onclick="setView('dash')" style="padding:6px 12px;font-size:13px;">3. Hiệu suất</button>
-    <button id="btnGantt" class="btn" onclick="setView('gantt')" style="padding:6px 12px;font-size:13px;">4. Tiến độ</button>
-    <button id="btnNoticeTree" class="btn" onclick="setView('noticeTree')" style="padding:6px 12px;font-size:13px;">5. Lịch sử TB</button>
+    <button id="btnNoticeTree" class="btn" onclick="setView('noticeTree')" style="padding:6px 12px;font-size:13px;">4. Lịch sử TB</button>
   </div>
   <button class="btn btn-outline" onclick="openEval()" style="border-color:#7c3aed;color:#6d28d9;">📊 Đánh giá tháng</button>
 </div>
@@ -558,11 +558,11 @@
       <div class="field-row">
         <div class="field-group">
           <label class="field-label">Tiến độ (%)</label>
-          <input type="number" id="rp_progress" min="0" max="100" placeholder="0">
+          <input type="number" id="rp_progress" min="0" max="100" placeholder="0" style="height:48px;font-size:22px;font-weight:800;color:#dc2626;text-align:center;padding:6px 12px;">
         </div>
         <div class="field-group">
           <label class="field-label">Yêu cầu dời hạn (ngày mới)</label>
-          <input type="date" id="rp_dlNew">
+          <input type="date" id="rp_dlNew" style="height:48px;font-size:15px;padding:6px 12px;">
         </div>
       </div>
 
@@ -953,6 +953,15 @@ function closeModalOutside(e) { if (e.target.id==='modalOverlay') closeModal(); 
 // ── BÁO CÁO CÔNG VIỆC (nhân viên tự cập nhật – KHÔNG cần mật khẩu) ──────
 let _reportTaskId = null;
 let _reportStId   = null;   // != null => đang báo cáo cho TASK CON
+let _reportSending = false; // chống bấm Gửi 2 lần
+function _setReportSending(on) {
+  const b = document.getElementById('rpSaveBtn');
+  if (!b) return;
+  b.disabled = on;
+  b.style.opacity = on ? '0.65' : '';
+  b.style.cursor  = on ? 'not-allowed' : 'pointer';
+  b.innerHTML = on ? '⏳ Đang gửi báo cáo...' : '💾 Gửi báo cáo';
+}
 function openReport(id, stId) {
   const t = tasks.find(x => String(x.id) === String(id));
   if (!t) { toast('Không tìm thấy công việc', 'err'); return; }
@@ -982,10 +991,12 @@ function openReport(id, stId) {
 function closeReport() {
   document.getElementById('reportOverlay').classList.remove('open');
   _reportTaskId = null; _reportStId = null;
+  _reportSending = false; _setReportSending(false);
 }
 
 async function saveReport() {
   if (_reportTaskId === null) return;
+  if (_reportSending) return;   // đang gửi → bỏ qua lần bấm thừa (chống gửi email 2 lần)
   const ti = tasks.findIndex(t => String(t.id) === String(_reportTaskId));
   if (ti < 0) { toast('Không tìm thấy công việc', 'err'); return; }
   const t = tasks[ti];
@@ -997,6 +1008,8 @@ async function saveReport() {
   const dlNew  = document.getElementById('rp_dlNew').value;
   const lyDo   = document.getElementById('rp_lyDo').value.trim();
   if (dlNew && !lyDo) { toast('Vui lòng nhập Lý do dời hạn', 'err'); return; }
+
+  _reportSending = true; _setReportSending(true);   // khoá nút + hiện "Đang gửi báo cáo..."
 
   const status = progress >= 100 ? 'Hoàn thành' : progress >= 1 ? 'Đang làm' : 'Chưa làm';
 
@@ -1261,7 +1274,7 @@ function _subtaskRows(t, parentStt) {
       <td style="max-width:140px;font-size:11px">${s.doc?`<a href="${esc(s.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
       <td>${isDone
         ? `<button class="btn btn-sm" disabled title="Đã hoàn thành – đã khoá báo cáo" style="background:#e5e7eb;color:#9ca3af;font-weight:600;white-space:nowrap;cursor:not-allowed;font-size:11px;">🔒 Đã hoàn thành</button>`
-        : `<button class="btn btn-sm" onclick="openReport('${t.id}','${s.id}')" title="Báo cáo task con" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;font-size:11px;">📝 Báo cáo công việc</button>`}</td>
+        : `<button class="btn btn-sm" onclick="openReport('${t.id}','${s.id}')" title="Báo cáo task con" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;font-size:11px;">📝 Báo cáo</button>`}</td>
       <td><div class="actions">
         <button class="btn btn-outline btn-sm" onclick="openSubtaskInfo('${t.id}','${s.id}')" title="Chi tiết task con" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
         <button class="btn btn-outline btn-sm" onclick="openSubtaskModal('${t.id}','${s.id}')" style="color:#7c3aed;border-color:#7c3aed;" title="Sửa task con">✏</button>
@@ -1414,7 +1427,7 @@ function taskRow(t, stt) {
     <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td>${t.status==='Hoàn thành'
       ? `<button class="btn btn-sm" disabled title="Đã hoàn thành – đã khoá báo cáo" style="background:#e5e7eb;color:#9ca3af;font-weight:600;white-space:nowrap;cursor:not-allowed;">🔒 Đã hoàn thành</button>`
-      : `<button class="btn btn-sm" onclick="openReport('${t.id}')" title="Nhân viên tự cập nhật báo cáo" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;">📝 Báo cáo công việc</button>`}</td>
+      : `<button class="btn btn-sm" onclick="openReport('${t.id}')" title="Nhân viên tự cập nhật báo cáo" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;">📝 Báo cáo</button>`}</td>
     <td><div class="actions">
       <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Chi tiết" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
       <button class="btn btn-outline btn-sm" onclick="openModal('${t.id}')" title="Chỉnh sửa">✏</button>
