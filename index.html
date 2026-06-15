@@ -745,7 +745,7 @@ function _mergeWithLocal(serverTasks) {
     if (local) {
       return {
         ...st,
-        subtasks:      local.subtasks      || [],   // giữ task con từ local
+        subtasks:      (Array.isArray(st.subtasks) && st.subtasks.length) ? st.subtasks : (local.subtasks || []),   // ưu tiên task con từ Sheet; nếu Sheet trống thì giữ local (chưa mất dữ liệu cũ)
         statusHistory: local.statusHistory || [],   // giữ lịch sử từ local
         dlRequests:    local.dlRequests    || [],   // giữ yêu cầu dời hạn từ local
         // serverHistory luôn lấy từ server (st đã có sẵn sau spread)
@@ -764,8 +764,13 @@ async function loadFromSheet() {
     const r = await fetch(WA_URL);
     const j = await r.json();
     if (j.ok && j.tasks) {
+      // Ghi nhận việc nào Sheet ĐÃ có task con (để migrate cái cũ chỉ nằm ở local)
+      const serverHadSt = {};
+      j.tasks.forEach(st => { serverHadSt[String(st.id)] = (Array.isArray(st.subtasks) && st.subtasks.length > 0); });
       tasks = _mergeWithLocal(j.tasks); // MERGE thay vì overwrite
       saveTasks(); _renderAll();
+      // Migrate: việc nào có task con ở máy này mà Sheet chưa có → đẩy lên 1 lần
+      tasks.forEach(t => { if ((t.subtasks||[]).length && !serverHadSt[String(t.id)]) _pushSubtasks(t.id); });
       setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
       toast(tasks.length ? ('Đã tải ' + tasks.length + ' công việc') : 'Chưa có công việc nào', tasks.length ? 'ok' : '');
       return;
@@ -2176,6 +2181,16 @@ function _infoDlReq(t) {
 }
 
 // ── SUB-TASKS ────────────────────────────────────────────────
+// Đồng bộ task con của 1 việc lên Google Sheet (để mọi người đều thấy)
+function _pushSubtasks(taskId) {
+  if (!WA_URL) return;
+  const t = tasks.find(x => String(x.id) === String(taskId));
+  if (!t) return;
+  fetch(WA_URL, { method:'POST', body: JSON.stringify({
+    action:'syncSubtasks', task:{ id:t.id, name:t.name, subtasks:t.subtasks||[] }, token: SECRET_TOKEN
+  })}).catch(()=>{});
+}
+
 function addSubtask(taskId) {
   const name=(document.getElementById('newStName')||{}).value?.trim();
   if (!name) { toast('Nhập tên task con', 'err'); return; }
@@ -2185,7 +2200,7 @@ function addSubtask(taskId) {
   if (ti<0) return;
   if (!tasks[ti].subtasks) tasks[ti].subtasks=[];
   tasks[ti].subtasks.push({ id:String(Date.now()), name, deadline, note, status:'Chưa làm', doneDate:'', createdAt:fmtVN(todayStr()) });
-  saveTasks(); render();
+  saveTasks(); render(); _pushSubtasks(taskId);
   _renderInfoModal(tasks[ti], 'subtasks');
   toast('Đã thêm task con: '+name, 'ok');
 }
@@ -2207,7 +2222,7 @@ function submitQuickAddSt(taskId) {
   tasks[ti].subtasks.push({ id:String(Date.now()), name, deadline, person, ccMembers:[], category:'', priority:'Trung bình', note:'', status:'Chưa làm', progress:0, doneDate:'', issue:'', doc:'', createdAt:fmtVN(todayStr()) });
   _stOpen[taskId] = true;
   _addingStTo = null;
-  saveTasks(); render();
+  saveTasks(); render(); _pushSubtasks(taskId);
   toast('✅ Đã thêm task con: ' + name, 'ok');
 }
 
@@ -2224,7 +2239,7 @@ function toggleSubtask(taskId, stId, checked) {
     type:'SUBTASK_UPDATED', stName:prev.name, stPerson:prev.person||tasks[ti].person,
     oldStatus:prev.status, newStatus:newSt, ..._tsNow()
   });
-  saveTasks(); render();
+  saveTasks(); render(); _pushSubtasks(taskId);
   _renderInfoModal(tasks[ti], 'subtasks');
 }
 
@@ -2233,7 +2248,7 @@ function delSubtask(taskId, stId) {
   if (!confirm('Xóa task này?')) return;
   const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
   tasks[ti].subtasks=(tasks[ti].subtasks||[]).filter(s=>String(s.id)!==String(stId));
-  saveTasks(); render();
+  saveTasks(); render(); _pushSubtasks(taskId);
   _renderInfoModal(tasks[ti], 'subtasks');
 }
 
