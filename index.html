@@ -337,6 +337,7 @@
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
+      <div id="dlReqBox" style="display:none;"></div>
       <div class="field-group"><label class="field-label">Tên công việc *</label><input type="text" id="f_name" placeholder="Nhập tên công việc..."></div>
 
       <div class="field-row">
@@ -928,6 +929,26 @@ async function deleteTask(id) {
 }
 
 // ── MODAL ────────────────────────────────────────────────────
+// Hiện yêu cầu dời deadline đang chờ duyệt ngay trong modal sửa (nút bút chì)
+function _renderDlReqBox() {
+  const box = document.getElementById('dlReqBox');
+  if (!box) return;
+  const t = editId !== null ? tasks.find(x => String(x.id) === String(editId)) : null;
+  const pend = t ? (t.dlRequests||[]).filter(r => r.status === 'pending') : [];
+  if (!pend.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = pend.map(r => `
+    <div style="border:1.5px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:11px 13px;margin-bottom:6px;">
+      <div style="font-weight:700;color:#92400e;font-size:13px;margin-bottom:5px;">⏳ Yêu cầu dời deadline đang chờ duyệt</div>
+      <div style="font-size:13px;">${fmtVN(r.currentDeadline)||'—'} → <strong style="color:#1a56db;">${fmtVN(r.newDate)}</strong></div>
+      <div style="font-size:12px;color:var(--gray-700);margin-top:3px;">Lý do: ${esc(r.reason||'(không nêu)')}</div>
+      <div style="display:flex;gap:8px;margin-top:9px;">
+        <button class="btn btn-sm" style="background:#065f46;color:white;font-weight:600;" onclick="openDlReview('${t.id}','${r.id}',true)">✓ Duyệt</button>
+        <button class="btn btn-sm btn-danger" style="font-weight:600;" onclick="openDlReview('${t.id}','${r.id}',false)">✗ Từ chối</button>
+      </div>
+    </div>`).join('');
+}
+
 function openModal(id) {
   if (!ensureAdmin(() => openModal(id))) return;   // 🔒 khoá thêm/sửa công việc
   editId = id !== undefined ? id : null;
@@ -949,6 +970,7 @@ function openModal(id) {
   renderCcMembers(t?.ccMembers || []);
   // Preserve subtasks (không hiển thị trong modal, quản lý qua nút ＋)
   _modalSubtasks = t ? JSON.parse(JSON.stringify(t.subtasks || [])) : [];
+  _renderDlReqBox();
   document.getElementById('modalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('f_name').focus(), 80);
 }
@@ -2473,6 +2495,7 @@ function confirmDlReview() {
   }
   toast(approved?'✓ Đã duyệt – deadline: '+fmtVN(tasks[ti].deadline):'✗ Đã từ chối', approved?'ok':'err');
   _renderInfoModal(tasks[ti], 'dlreq');
+  _renderDlReqBox();   // làm mới khu vực duyệt trong modal sửa (nếu đang mở)
   _dlRevCtx=null;
 }
 
@@ -3044,7 +3067,7 @@ function toast(msg, type='') {
 
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') { closeModal(); closeInfo(); closeDlRev(); closeEval(); closeNotice(); closeSubtaskModal(); closeReport(); closePwModal(); }
-  if (e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('open') && e.target.tagName!=='TEXTAREA') { e.preventDefault(); saveTask(); }
+  if (e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('open') && !document.getElementById('dlRevOverlay').classList.contains('open') && e.target.tagName!=='TEXTAREA') { e.preventDefault(); saveTask(); }
 });
 
 // ── HẠN CHẾ SAO CHÉP MÃ NGUỒN ────────────────────────────────
