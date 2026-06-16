@@ -582,6 +582,17 @@
         <textarea id="rp_result" placeholder="Kết quả/sản phẩm đã hoàn thành..." style="min-height:55px;"></textarea>
       </div>
 
+      <div class="field-group">
+        <label class="field-label">Tệp / hình ảnh đính kèm <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(tuỳ chọn · kéo-thả hoặc bấm chọn · nhiều tệp · tối đa 5MB/tệp)</span></label>
+        <div id="rp_dropzone" onclick="document.getElementById('rp_image').click()"
+          ondragover="_rpDragOver(event,true)" ondragleave="_rpDragOver(event,false)" ondrop="_rpDrop(event)"
+          style="border:2px dashed var(--gray-300);border-radius:8px;padding:16px;text-align:center;cursor:pointer;color:var(--gray-500);font-size:13px;background:var(--gray-50);transition:all .15s;">
+          📎 Kéo &amp; thả tệp hoặc ảnh vào đây, hoặc bấm để chọn
+        </div>
+        <input type="file" id="rp_image" multiple style="display:none;" onchange="_addRpFiles(this.files); this.value='';">
+        <div id="rp_imgList" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
+
       <div style="font-size:11px;color:var(--gray-500);">Trạng thái sẽ tự cập nhật theo Tiến độ: 100% = Hoàn thành, 1–99% = Đang làm, 0% = Chưa làm.</div>
     </div>
     <div class="modal-footer">
@@ -746,9 +757,11 @@ function _mergeWithLocal(serverTasks) {
     if (local) {
       return {
         ...st,
-        subtasks:      (Array.isArray(st.subtasks) && st.subtasks.length) ? st.subtasks : (local.subtasks || []),   // ưu tiên task con từ Sheet; nếu Sheet trống thì giữ local (chưa mất dữ liệu cũ)
-        statusHistory: local.statusHistory || [],   // giữ lịch sử từ local
-        dlRequests:    local.dlRequests    || [],   // giữ yêu cầu dời hạn từ local
+        subtasks:      (Array.isArray(st.subtasks) && st.subtasks.length) ? st.subtasks : (local.subtasks || []),         // ưu tiên Sheet; trống thì giữ local
+        statusHistory: (Array.isArray(st.statusHistory) && st.statusHistory.length) ? st.statusHistory : (local.statusHistory || []),
+        dlRequests:    (Array.isArray(st.dlRequests) && st.dlRequests.length) ? st.dlRequests : (local.dlRequests || []),
+        ccMembers:     (Array.isArray(st.ccMembers) && st.ccMembers.length) ? st.ccMembers : (local.ccMembers || []),
+        resultImages:  (Array.isArray(st.resultImages) && st.resultImages.length) ? st.resultImages : (local.resultImages || []),
         // serverHistory luôn lấy từ server (st đã có sẵn sau spread)
       };
     }
@@ -766,12 +779,24 @@ async function loadFromSheet() {
     const j = await r.json();
     if (j.ok && j.tasks) {
       // Ghi nhận việc nào Sheet ĐÃ có task con (để migrate cái cũ chỉ nằm ở local)
-      const serverHadSt = {};
-      j.tasks.forEach(st => { serverHadSt[String(st.id)] = (Array.isArray(st.subtasks) && st.subtasks.length > 0); });
+      const serverHadSt = {}, serverHadDl = {}, serverHadCc = {}, serverHadHi = {};
+      j.tasks.forEach(st => {
+        serverHadSt[String(st.id)] = (Array.isArray(st.subtasks)      && st.subtasks.length      > 0);
+        serverHadDl[String(st.id)] = (Array.isArray(st.dlRequests)    && st.dlRequests.length    > 0);
+        serverHadCc[String(st.id)] = (Array.isArray(st.ccMembers)     && st.ccMembers.length     > 0);
+        serverHadHi[String(st.id)] = (Array.isArray(st.statusHistory) && st.statusHistory.length > 0);
+      });
       tasks = _mergeWithLocal(j.tasks); // MERGE thay vì overwrite
       saveTasks(); _renderAll();
-      // Migrate: việc nào có task con ở máy này mà Sheet chưa có → đẩy lên 1 lần
-      tasks.forEach(t => { if ((t.subtasks||[]).length && !serverHadSt[String(t.id)]) _pushSubtasks(t.id); });
+      // Migrate: việc nào có dữ liệu ở máy này mà Sheet chưa có → đẩy lên 1 lần
+      tasks.forEach(t => {
+        const id = String(t.id);
+        const needMeta = ((t.subtasks||[]).length && !serverHadSt[id])
+                      || ((t.ccMembers||[]).length && !serverHadCc[id])
+                      || ((t.statusHistory||[]).length && !serverHadHi[id]);
+        if (needMeta) _pushSubtasks(t.id);   // _pushSubtasks gửi cả task con + ccMembers + lịch sử
+        if ((t.dlRequests||[]).length && !serverHadDl[id]) _pushDlReq(t.id);
+      });
       setStat('Đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN'));
       toast(tasks.length ? ('Đã tải ' + tasks.length + ' công việc') : 'Chưa có công việc nào', tasks.length ? 'ok' : '');
       return;
@@ -891,6 +916,7 @@ async function saveTask() {
   } else {
     toast(editId?'Đã cập nhật (offline)':'Đã thêm việc. Cần kết nối Apps Script để gửi email tự động.', '');
   }
+  _pushSubtasks(task.id);   // đồng bộ ccMembers + lịch sử + task con cho mọi người
   setBtnLoading(false);
 }
 
@@ -1012,8 +1038,67 @@ function openReport(id, stId) {
   document.getElementById('rp_result').value   = obj.result || '';
   document.getElementById('rp_lyDo').value     = obj.lyDo   || '';
   document.getElementById('rp_dlNew').value    = '';
+  document.getElementById('rp_image').value    = '';
+  _rpExistingImages = JSON.parse(JSON.stringify(obj.resultImages || []));
+  _rpPendingImages = [];
+  _renderRpImgList();
   document.getElementById('reportOverlay').classList.add('open');
   setTimeout(() => document.getElementById('rp_progress').focus(), 80);
+}
+function _readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = reject;
+    fr.readAsDataURL(file);
+  });
+}
+let _rpPendingImages = [];   // ảnh mới chọn, chưa tải lên: {name, dataUrl}
+let _rpExistingImages = [];  // ảnh đã có sẵn của việc: {url, id, at}
+function _rpDragOver(e, on) {
+  e.preventDefault();
+  const dz = document.getElementById('rp_dropzone');
+  if (dz) { dz.style.borderColor = on ? 'var(--primary)' : 'var(--gray-300)'; dz.style.background = on ? '#eff6ff' : 'var(--gray-50)'; }
+}
+function _rpDrop(e) {
+  e.preventDefault(); _rpDragOver(e, false);
+  if (e.dataTransfer && e.dataTransfer.files) _addRpFiles(e.dataTransfer.files);
+}
+async function _addRpFiles(fileList) {
+  const files = Array.from(fileList || []);
+  for (const f of files) {
+    if (f.size > 5 * 1024 * 1024) { toast('Tệp quá lớn (>5MB): ' + f.name, 'err'); continue; }
+    try {
+      const dataUrl = await _readFileAsDataURL(f);
+      _rpPendingImages.push({ name: f.name, type: f.type || '', isImage: (f.type || '').startsWith('image/'), dataUrl });
+    } catch(e) {}
+  }
+  _renderRpImgList();
+}
+function _removeRpExisting(i) { _rpExistingImages.splice(i, 1); _renderRpImgList(); }
+function _removeRpPending(i)  { _rpPendingImages.splice(i, 1);  _renderRpImgList(); }
+function _renderRpImgList() {
+  const box = document.getElementById('rp_imgList');
+  if (!box) return;
+  const wrap = (inner, onx, badge) => `
+    <div style="position:relative;">
+      ${inner}
+      <button type="button" onclick="${onx}" title="Xoá tệp này" style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#ef4444;color:white;border:2px solid white;cursor:pointer;font-size:11px;line-height:1;padding:0;z-index:1;">✕</button>
+      ${badge ? `<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:white;font-size:9px;text-align:center;border-radius:0 0 6px 6px;">${badge}</span>` : ''}
+    </div>`;
+  const imgBox  = src  => `<img src="${src}" style="width:74px;height:74px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);display:block;">`;
+  const fileBox = name => `<div style="width:74px;height:74px;border:1px solid var(--gray-200);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--gray-50);padding:4px;text-align:center;"><div style="font-size:24px;line-height:1;">📄</div><div style="font-size:8px;color:var(--gray-600);width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;">${esc(name || 'tệp')}</div></div>`;
+  let html = '';
+  _rpExistingImages.forEach((im, i) => {
+    const isImg = (im.isImage !== false);
+    const inner = isImg ? imgBox(im.id ? ('https://drive.google.com/thumbnail?id=' + esc(im.id) + '&sz=w200') : esc(im.url)) : fileBox(im.name);
+    html += wrap(inner, `_removeRpExisting(${i})`, '');
+  });
+  _rpPendingImages.forEach((im, i) => {
+    const inner = im.isImage ? imgBox(esc(im.dataUrl)) : fileBox(im.name);
+    html += wrap(inner, `_removeRpPending(${i})`, 'Mới');
+  });
+  box.innerHTML = html || '<span style="font-size:11px;color:var(--gray-400);">Chưa có tệp đính kèm</span>';
 }
 function closeReport() {
   document.getElementById('reportOverlay').classList.remove('open');
@@ -1038,6 +1123,25 @@ async function saveReport() {
 
   _reportSending = true; _setReportSending(true);   // khoá nút + hiện "Đang gửi báo cáo..."
 
+  // ── Tải các ảnh mới lên Drive; gộp với ảnh đã giữ lại ──
+  const _b = document.getElementById('rpSaveBtn');
+  let _newImgs = [];
+  if (_rpPendingImages.length && WA_URL) {
+    for (let k = 0; k < _rpPendingImages.length; k++) {
+      if (_b) _b.innerHTML = `⏳ Đang tải ảnh ${k+1}/${_rpPendingImages.length}...`;
+      try {
+        const rr = await fetch(WA_URL, { method:'POST', body: JSON.stringify({ action:'uploadAnh', filename:_rpPendingImages[k].name, dataUrl:_rpPendingImages[k].dataUrl, token: SECRET_TOKEN })});
+        const jj = await rr.json();
+        if (jj && jj.ok && jj.url) _newImgs.push({ url: jj.url, id: jj.id || '', at: fmtVN(todayStr()), name: _rpPendingImages[k].name, isImage: _rpPendingImages[k].isImage });
+        else toast('Có tệp không tải được lên', 'err');
+      } catch(e) { toast('Lỗi tải ảnh: ' + e.message, 'err'); }
+    }
+    if (_b) _b.innerHTML = '⏳ Đang gửi báo cáo...';
+  } else if (_rpPendingImages.length && !WA_URL) {
+    toast('Cần kết nối Web App để tải ảnh lên', 'err');
+  }
+  const _finalImgs = _rpExistingImages.concat(_newImgs);
+
   const status = progress >= 100 ? 'Hoàn thành' : progress >= 1 ? 'Đang làm' : 'Chưa làm';
 
   // ── BÁO CÁO CHO TASK CON ────────────────────────────────────
@@ -1050,6 +1154,7 @@ async function saveReport() {
     if (status !== 'Hoàn thành') doneDate = '';
     const prevStatus = s.status;
     Object.assign(s, { progress, issue, result, status, doneDate, lyDo });
+    s.resultImages = _finalImgs;
     if (dlNew) s.deadline = dlNew;   // task con: cập nhật deadline trực tiếp (không qua duyệt)
     if (!t.statusHistory) t.statusHistory = [];
     t.statusHistory.push({ type:'SUBTASK_UPDATED', stName:s.name, stPerson:s.person||t.person,
@@ -1086,6 +1191,7 @@ async function saveReport() {
   if ((t.result||'').trim() !== result && result) hist.push({type:'ADD_COMMENT', actor, result, ..._tsNow()});
 
   Object.assign(t, { progress, issue, result, status, doneDate, lyDo, statusHistory: hist });
+  t.resultImages = _finalImgs;
   saveTasks(); render();
 
   // Đồng bộ về Google Sheet (cột Tiến độ H, Vướng mắc J, Kết quả N, Lý do R)
@@ -1104,7 +1210,7 @@ async function saveReport() {
     if (!t.dlRequests) t.dlRequests = [];
     t.dlRequests.push({ id:String(Date.now()), currentDeadline:t.deadline||'', newDate:dlNew, reason:lyDo,
       requestedAt:fmtVN(todayStr()), status:'pending', reviewedAt:'', reviewNote:'' });
-    saveTasks();
+    saveTasks(); _pushDlReq(t.id);
     if (WA_URL) {
       fetch(WA_URL, { method:'POST', body: JSON.stringify({
         action:'dlRequest',
@@ -1114,6 +1220,7 @@ async function saveReport() {
     }
   }
 
+  _pushSubtasks(t.id);   // đồng bộ lịch sử công việc cho mọi người
   toast('✅ Đã gửi báo cáo công việc', 'ok');
   closeReport();
 }
@@ -2209,7 +2316,17 @@ function _pushSubtasks(taskId) {
   const t = tasks.find(x => String(x.id) === String(taskId));
   if (!t) return;
   fetch(WA_URL, { method:'POST', body: JSON.stringify({
-    action:'syncSubtasks', task:{ id:t.id, name:t.name, subtasks:t.subtasks||[] }, token: SECRET_TOKEN
+    action:'syncSubtasks', task:{ id:t.id, name:t.name, subtasks:t.subtasks||[], ccMembers:t.ccMembers||[], statusHistory:t.statusHistory||[], resultImages:t.resultImages||[] }, token: SECRET_TOKEN
+  })}).catch(()=>{});
+}
+
+// Đồng bộ danh sách yêu cầu dời deadline của 1 việc lên Sheet (mọi người thấy giống nhau)
+function _pushDlReq(taskId) {
+  if (!WA_URL) return;
+  const t = tasks.find(x => String(x.id) === String(taskId));
+  if (!t) return;
+  fetch(WA_URL, { method:'POST', body: JSON.stringify({
+    action:'syncDlReq', task:{ id:t.id, name:t.name, dlRequests:t.dlRequests||[] }, token: SECRET_TOKEN
   })}).catch(()=>{});
 }
 
@@ -2444,7 +2561,7 @@ function submitDlRequest(taskId) {
   if (!tasks[ti].dlRequests) tasks[ti].dlRequests=[];
   const req={ id:String(Date.now()), currentDeadline:tasks[ti].deadline||'', newDate, reason, requestedAt:fmtVN(todayStr()), status:'pending', reviewedAt:'', reviewNote:'' };
   tasks[ti].dlRequests.push(req);
-  saveTasks(); render();
+  saveTasks(); render(); _pushDlReq(taskId);
   if (WA_URL) {
     const t=tasks[ti];
     fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'dlRequest',task:{id:t.id,name:t.name,person:t.person,deadline:t.deadline,newDate,reason},token:SECRET_TOKEN})})
@@ -2475,28 +2592,37 @@ function openDlReview(taskId, reqId, approved) {
   document.getElementById('dlRevOverlay').classList.add('open');
 }
 
-function closeDlRev() { document.getElementById('dlRevOverlay').classList.remove('open'); }
+function closeDlRev() { document.getElementById('dlRevOverlay').classList.remove('open'); _dlRevSending=false; }
 
-function confirmDlReview() {
+let _dlRevSending = false;
+async function confirmDlReview() {
   if (!_dlRevCtx) return;
+  if (_dlRevSending) return;   // đang xử lý → bỏ qua lần bấm thừa
   const {taskId, reqId, approved}=_dlRevCtx;
   const note=(document.getElementById('dlRevNote')||{}).value?.trim()||'';
   const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
   const ri=(tasks[ti].dlRequests||[]).findIndex(r=>String(r.id)===String(reqId)); if (ri<0) return;
+
+  _dlRevSending = true;
+  const _b = document.querySelector('#dlRevFooter .btn:last-child');
+  if (_b) { _b.disabled=true; _b.style.opacity='0.6'; _b.style.cursor='not-allowed'; _b.textContent='⏳ Đang xử lý...'; }
+
   tasks[ti].dlRequests[ri].status=approved?'approved':'rejected';
   tasks[ti].dlRequests[ri].reviewedAt=fmtVN(todayStr());
   tasks[ti].dlRequests[ri].reviewNote=note;
   if (approved) tasks[ti].deadline=tasks[ti].dlRequests[ri].newDate;
-  saveTasks(); render(); closeDlRev();
+  saveTasks(); _pushDlReq(taskId);   // đồng bộ trạng thái duyệt cho mọi người
   if (WA_URL) {
-    const t=tasks[ti], req=t.dlRequests[ri];
-    fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'dlReview',task:{id:t.id,name:t.name,person:t.person,newDate:req.newDate,approved,note},token:SECRET_TOKEN})})
-      .then(r=>r.json()).catch(()=>{});
+    try {
+      const t=tasks[ti], req=t.dlRequests[ri];
+      await fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'dlReview',task:{id:t.id,name:t.name,person:t.person,newDate:req.newDate,approved,note},token:SECRET_TOKEN})});
+    } catch(e) {}
   }
+  render(); closeDlRev();
   toast(approved?'✓ Đã duyệt – deadline: '+fmtVN(tasks[ti].deadline):'✗ Đã từ chối', approved?'ok':'err');
   _renderInfoModal(tasks[ti], 'dlreq');
   _renderDlReqBox();   // làm mới khu vực duyệt trong modal sửa (nếu đang mở)
-  _dlRevCtx=null;
+  _dlRevSending = false; _dlRevCtx=null;
 }
 
 // ── THÔNG BÁO ────────────────────────────────────────────────
@@ -2800,6 +2926,7 @@ function _renderInfoDetail(id, tab) {
       ${row('Ghi chú',t.note?`<span style="white-space:pre-wrap;">${esc(t.note)}</span>`:'')}
       ${row('Vướng mắc',t.issue?`<span style="color:#c27803;">⚠ ${esc(t.issue)}</span>`:'',true)}
       ${row('Kết quả',t.result?`<span style="white-space:pre-wrap;">${esc(t.result)}</span>`:'')}
+      ${row('Tệp đính kèm', (t.resultImages&&t.resultImages.length)?t.resultImages.map(im=> (im.isImage!==false) ? `<a href="${esc(im.url)}" target="_blank" title="Xem ảnh"><img src="${im.id?('https://drive.google.com/thumbnail?id='+esc(im.id)+'&sz=w400'):esc(im.url)}" style="width:74px;height:74px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;margin:2px;"></a>` : `<a href="${esc(im.url)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;color:#1a56db;margin:2px 10px 2px 0;text-decoration:none;font-size:12px;">📄 ${esc(im.name||'Tệp')}</a>`).join(''):'')}
       ${row('Tài liệu',t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu</a>`:'',true)}
     </table>
     <div style="text-align:right;">
