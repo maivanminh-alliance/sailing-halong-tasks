@@ -956,10 +956,20 @@ async function deleteTask(id) {
 
 // ── MODAL ────────────────────────────────────────────────────
 // Hiện yêu cầu dời deadline đang chờ duyệt ngay trong modal sửa (nút bút chì)
+// Gộp các yêu cầu dời deadline ĐANG CHỜ DUYỆT bị trùng → chỉ giữ 1 cái mới nhất
+function _dedupePendingDl(t) {
+  if (!t || !t.dlRequests) return false;
+  const pend = t.dlRequests.filter(r => r.status === 'pending');
+  if (pend.length <= 1) return false;
+  const keep = pend[pend.length - 1];
+  t.dlRequests = t.dlRequests.filter(r => r.status !== 'pending').concat([keep]);
+  return true;
+}
 function _renderDlReqBox() {
   const box = document.getElementById('dlReqBox');
   if (!box) return;
   const t = editId !== null ? tasks.find(x => String(x.id) === String(editId)) : null;
+  if (t && _dedupePendingDl(t)) { saveTasks(); render(); _pushDlReq(t.id); }
   const pend = t ? (t.dlRequests||[]).filter(r => r.status === 'pending') : [];
   if (!pend.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = 'block';
@@ -1208,6 +1218,7 @@ async function saveReport() {
   // Nếu có yêu cầu dời hạn → tạo yêu cầu + gửi email phê duyệt (PC + PM)
   if (dlNew) {
     if (!t.dlRequests) t.dlRequests = [];
+    t.dlRequests = t.dlRequests.filter(r => r.status !== 'pending');   // chỉ giữ 1 yêu cầu chờ duyệt
     t.dlRequests.push({ id:String(Date.now()), currentDeadline:t.deadline||'', newDate:dlNew, reason:lyDo,
       requestedAt:fmtVN(todayStr()), status:'pending', reviewedAt:'', reviewNote:'' });
     saveTasks(); _pushDlReq(t.id);
@@ -1615,14 +1626,49 @@ function setView(mode) {
 }
 
 // ── GANTT / TIẾN ĐỘ ─────────────────────────────────────────
+// ── BỘ LỌC CHO TAB TIẾN ĐỘ (GANTT) ──────────────────────────
+let _ganttFilter = { name:'', person:'', status:'' };
+function _closeGanttPop() { const p = document.getElementById('ganttFilterPop'); if (p) p.style.display='none'; }
+function _ganttClearFilter() { _ganttFilter = { name:'', person:'', status:'' }; _closeGanttPop(); renderGantt(); }
+function _ganttHdrFilter(key, ev) {
+  ev.stopPropagation();
+  let pop = document.getElementById('ganttFilterPop');
+  if (!pop) {
+    pop = document.createElement('div'); pop.id = 'ganttFilterPop'; document.body.appendChild(pop);
+    document.addEventListener('click', e => { if (!e.target.closest('#ganttFilterPop')) _closeGanttPop(); });
+  }
+  pop.style.cssText = 'position:fixed;z-index:9999;background:white;border:1.5px solid var(--primary);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:9px;min-width:190px;';
+  const inStyle = 'width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--gray-300);border-radius:5px;';
+  let inner = '';
+  if (key === 'name') inner = `<input id="gfIn" type="text" value="${esc(_ganttFilter.name)}" placeholder="🔍 Lọc tên công việc..." style="${inStyle}" oninput="_ganttFilter.name=this.value;renderGantt();">`;
+  else if (key === 'person') { const opts = ['<option value="">— Tất cả —</option>'].concat(MEMBERS.map(m=>`<option ${_ganttFilter.person===m?'selected':''}>${esc(m)}</option>`)).join(''); inner = `<select id="gfIn" style="${inStyle}" onchange="_ganttFilter.person=this.value;renderGantt();">${opts}</select>`; }
+  else inner = `<select id="gfIn" style="${inStyle}" onchange="_ganttFilter.status=this.value;renderGantt();"><option value="">— Tất cả —</option>${['Chưa làm','Đang làm','Hoàn thành'].map(s=>`<option ${_ganttFilter.status===s?'selected':''}>${s}</option>`).join('')}</select>`;
+  pop.innerHTML = inner + `<div style="text-align:right;margin-top:7px;"><span onclick="_ganttFilter['${key}']='';renderGantt();_closeGanttPop();" style="font-size:11px;color:#991b1b;cursor:pointer;">✕ Xoá lọc cột này</span></div>`;
+  const r = ev.currentTarget.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 210)) + 'px';
+  pop.style.top  = (r.bottom + 3) + 'px';
+  pop.style.display = 'block';
+  setTimeout(() => { const i = document.getElementById('gfIn'); if (i) i.focus(); }, 30);
+}
+
 function renderGantt() {
   const el = document.getElementById('ganttView');
-  const all = tasks.filter(t=>t.name).sort((a,b)=>{
+  const _gf = _ganttFilter;
+  const all = tasks.filter(t => t.name
+      && (!_gf.name   || (t.name||'').toLowerCase().includes(_gf.name.toLowerCase()))
+      && (!_gf.person || (t.person||'') === _gf.person)
+      && (!_gf.status || (t.status||'') === _gf.status)
+    ).sort((a,b)=>{
     if (!a.deadline&&!b.deadline) return 0;
     if (!a.deadline) return 1; if (!b.deadline) return -1;
     return a.deadline.localeCompare(b.deadline);
   });
-  if (!all.length) { el.innerHTML='<div style="text-align:center;padding:40px;color:var(--gray-500);">Chưa có dữ liệu</div>'; return; }
+  if (!all.length) {
+    el.innerHTML = tasks.some(t=>t.name)
+      ? '<div style="text-align:center;padding:40px;color:var(--gray-500);">Không có công việc khớp bộ lọc. <span onclick="_ganttClearFilter()" style="color:var(--primary);cursor:pointer;text-decoration:underline;">Xoá lọc</span></div>'
+      : '<div style="text-align:center;padding:40px;color:var(--gray-500);">Chưa có dữ liệu</div>';
+    return;
+  }
 
   const td = todayStr();
   const today = new Date(td);
@@ -1887,8 +1933,13 @@ function renderGantt() {
   </div>`;
 
   // Header trái – height phải bằng tổng của month+day header (28+22=50px)
+  const _gfKey = { name:'name', who:'person', st:'status' };
   const leftHdrHtml = `<div style="display:flex;align-items:stretch;background:#1a56db;height:50px;position:sticky;left:0;z-index:11;">
-    ${COLS.map(c=>`<div style="width:${c.w}px;flex-shrink:0;padding:0 6px;border-right:1px solid rgba(255,255,255,.15);display:flex;align-items:center;font-size:11px;font-weight:700;color:white;overflow:hidden;white-space:nowrap;">${c.label}</div>`).join('')}
+    ${COLS.map(c=>{
+      const k = _gfKey[c.id];
+      const act = k && _ganttFilter[k];
+      return `<div ${k?`onclick="_ganttHdrFilter('${k}',event)" title="Bấm để lọc"`:''} style="width:${c.w}px;flex-shrink:0;padding:0 6px;border-right:1px solid rgba(255,255,255,.15);display:flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:white;overflow:hidden;white-space:nowrap;${k?'cursor:pointer;':''}${act?'background:rgba(255,255,255,.2);':''}">${c.label}${k?` <span style="font-size:8px;opacity:.85;">▾</span>`:''}${act?' <span style="font-size:9px;color:#ffe08a;">●</span>':''}</div>`;
+    }).join('')}
   </div>`;
 
   el.innerHTML = `
@@ -1915,30 +1966,40 @@ function renderGantt() {
 function _memberStats() {
   const td = todayStr();
   const map = {};
-  tasks.forEach(t => {
-    const p = t.person || 'Không rõ';
+  const _ensure = p => {
     if (!map[p]) map[p] = { name:p, total:0, truocHan:0, dungHan:0, treHan:0, doneNoDate:0,
       dangLam:0, dangLamQuaHan:0, chuaLam:0, chuaLamQuaHan:0,
       stTotal:0, stDone:0, dlPending:0, issues:0 };
-    const s = map[p];
+    return map[p];
+  };
+  // Tính 1 hạng mục công việc (việc chính HOẶC task con) vào người phụ trách
+  const _apply = (person, item) => {
+    const s = _ensure(person);
     s.total++;
-    const pf = perfOf(t);
-    if (t.status === 'Hoàn thành') {
-      if      (pf.key==='early')      s.truocHan++;
-      else if (pf.key==='ontime')     s.dungHan++;
-      else if (pf.key==='late')       s.treHan++;
-      else                            s.doneNoDate++;
-    } else if (t.status === 'Đang làm') {
+    const pf = perfOf(item);
+    if (item.status === 'Hoàn thành') {
+      if      (pf.key==='early')  s.truocHan++;
+      else if (pf.key==='ontime') s.dungHan++;
+      else if (pf.key==='late')   s.treHan++;
+      else                        s.doneNoDate++;
+    } else if (item.status === 'Đang làm') {
       s.dangLam++;
-      if (t.deadline && t.deadline < td) s.dangLamQuaHan++;
+      if (item.deadline && item.deadline < td) s.dangLamQuaHan++;
     } else {
       s.chuaLam++;
-      if (t.deadline && t.deadline < td) s.chuaLamQuaHan++;
+      if (item.deadline && item.deadline < td) s.chuaLamQuaHan++;
     }
-    s.stTotal += (t.subtasks||[]).length;
-    s.stDone  += (t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length;
-    if ((t.dlRequests||[]).some(r=>r.status==='pending')) s.dlPending++;
-    if (t.issue) s.issues++;
+    if (item.issue) s.issues++;
+  };
+  tasks.forEach(t => {
+    const p = t.person || 'Không rõ';
+    _apply(p, t);
+    const sMain = _ensure(p);
+    sMain.stTotal += (t.subtasks||[]).length;
+    sMain.stDone  += (t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length;
+    if ((t.dlRequests||[]).some(r=>r.status==='pending')) sMain.dlPending++;
+    // Task con tính như công việc của người phụ trách task con
+    (t.subtasks||[]).forEach(st => _apply(st.person || t.person || 'Không rõ', st));
   });
   return map;
 }
@@ -2559,6 +2620,7 @@ function submitDlRequest(taskId) {
   if (!reason)  { toast('Nhập lý do', 'err'); return; }
   const ti=tasks.findIndex(t=>String(t.id)===String(taskId)); if (ti<0) return;
   if (!tasks[ti].dlRequests) tasks[ti].dlRequests=[];
+  tasks[ti].dlRequests = tasks[ti].dlRequests.filter(r => r.status !== 'pending');   // chỉ giữ 1 yêu cầu chờ duyệt
   const req={ id:String(Date.now()), currentDeadline:tasks[ti].deadline||'', newDate, reason, requestedAt:fmtVN(todayStr()), status:'pending', reviewedAt:'', reviewNote:'' };
   tasks[ti].dlRequests.push(req);
   saveTasks(); render(); _pushDlReq(taskId);
@@ -3006,11 +3068,19 @@ function closeEval() { document.getElementById('evalOverlay').classList.remove('
 function renderEval() {
   const m = document.getElementById('evalMonth').value;
   const body = document.getElementById('evalBody');
-  const list = tasks.filter(t => t.deadline && t.deadline.startsWith(m));
-  if (!list.length) { body.innerHTML = `<div class="empty">Không có công việc nào có deadline trong tháng ${m.split('-')[1]}/${m.split('-')[0]}</div>`; return; }
-
+  const inMonth = (d) => d && String(d).startsWith(m);
   const byPerson = {};
-  list.forEach(t => { (byPerson[t.person] = byPerson[t.person]||[]).push(t); });
+  tasks.forEach(t => {
+    if (inMonth(t.deadline)) (byPerson[t.person || 'Không rõ'] = byPerson[t.person || 'Không rõ']||[]).push(t);
+    // Task con: tính theo deadline + người phụ trách của task con
+    (t.subtasks||[]).forEach(st => {
+      if (inMonth(st.deadline)) {
+        const sp = st.person || t.person || 'Không rõ';
+        (byPerson[sp] = byPerson[sp]||[]).push(Object.assign({}, st, { _sub:true, _parentId:t.id }));
+      }
+    });
+  });
+  if (!Object.keys(byPerson).some(k => byPerson[k].length)) { body.innerHTML = `<div class="empty">Không có công việc nào có deadline trong tháng ${m.split('-')[1]}/${m.split('-')[0]}</div>`; return; }
   const keys = MEMBERS.filter(p=>byPerson[p]).concat(Object.keys(byPerson).filter(k=>!MEMBERS.includes(k)));
 
   const num = (v,c) => v ? `<strong style="color:${c};">${v}</strong>` : '<span style="color:var(--gray-300)">0</span>';
@@ -3068,8 +3138,12 @@ function renderEval() {
           <th style="padding:6px 8px;border:1px solid #e5e7eb;">Ngày xong</th>
           <th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb;">Đánh giá</th>
         </tr>
-        ${pts.map(t => { const pf = perfOf(t); return `<tr>
-          <td style="padding:6px 8px;border:1px solid #e5e7eb;"><a href="javascript:void(0)" onclick="closeEval();openInfo('${t.id}')" style="color:var(--primary);text-decoration:none;">${esc(t.name)}</a></td>
+        ${pts.map(t => { const pf = perfOf(t);
+          const nameCell = t._sub
+            ? `<a href="javascript:void(0)" onclick="closeEval();openSubtaskInfo('${t._parentId}','${t.id}')" style="color:#7c3aed;text-decoration:none;">└ ${esc(t.name)}</a>`
+            : `<a href="javascript:void(0)" onclick="closeEval();openInfo('${t.id}')" style="color:var(--primary);text-decoration:none;">${esc(t.name)}</a>`;
+          return `<tr>
+          <td style="padding:6px 8px;border:1px solid #e5e7eb;">${nameCell}</td>
           <td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:center;white-space:nowrap;">${fmtVN(t.deadline)}</td>
           <td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:center;white-space:nowrap;">${t.doneDate?fmtVN((t.doneDate||'').slice(0,10)):'–'}</td>
           <td style="padding:6px 8px;border:1px solid #e5e7eb;"><span style="background:${pf.bg};color:${pf.color};padding:1px 8px;border-radius:10px;font-weight:600;">${pf.label}</span></td>
