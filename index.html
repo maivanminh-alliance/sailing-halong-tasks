@@ -337,6 +337,7 @@
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <div class="modal-body">
+      <div id="doneReviewBox" style="display:none;"></div>
       <div id="dlReqBox" style="display:none;"></div>
       <div class="field-group"><label class="field-label">Tên công việc *</label><input type="text" id="f_name" placeholder="Nhập tên công việc..."></div>
 
@@ -762,6 +763,7 @@ function _mergeWithLocal(serverTasks) {
         dlRequests:    (Array.isArray(st.dlRequests) && st.dlRequests.length) ? st.dlRequests : (local.dlRequests || []),
         ccMembers:     (Array.isArray(st.ccMembers) && st.ccMembers.length) ? st.ccMembers : (local.ccMembers || []),
         resultImages:  (Array.isArray(st.resultImages) && st.resultImages.length) ? st.resultImages : (local.resultImages || []),
+        doneReview:    (st.doneReview !== undefined && st.doneReview !== null) ? st.doneReview : (local.doneReview || null),
         // serverHistory luôn lấy từ server (st đã có sẵn sau spread)
       };
     }
@@ -965,6 +967,62 @@ function _dedupePendingDl(t) {
   t.dlRequests = t.dlRequests.filter(r => r.status !== 'pending').concat([keep]);
   return true;
 }
+// ── DUYỆT HOÀN THÀNH (trong modal sửa) ───────────────────────
+function _renderDoneReviewBox() {
+  const box = document.getElementById('doneReviewBox');
+  if (!box) return;
+  const t = editId !== null ? tasks.find(x => String(x.id) === String(editId)) : null;
+  const dr = t && t.doneReview;
+  if (!dr || dr.status !== 'pending') { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="border:1.5px solid #0369a1;background:#f0f9ff;border-radius:8px;padding:11px 13px;margin-bottom:6px;">
+      <div style="font-weight:700;color:#0c4a6e;font-size:13px;margin-bottom:5px;">✅ Xin duyệt HOÀN THÀNH (100%)</div>
+      <div style="font-size:12px;color:var(--gray-700);">Người thực hiện: <strong>${esc(t.person||'')}</strong> · ${esc(dr.requestedAt||'')}</div>
+      ${dr.result?`<div style="font-size:12px;color:var(--gray-700);margin-top:3px;">Kết quả: ${esc(dr.result)}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:9px;">
+        <button class="btn btn-sm" style="background:#065f46;color:white;font-weight:600;" onclick="confirmDoneReview('${t.id}',true)">✓ Duyệt – đóng việc</button>
+        <button class="btn btn-sm btn-danger" style="font-weight:600;" onclick="confirmDoneReview('${t.id}',false)">✗ Từ chối</button>
+      </div>
+    </div>`;
+}
+let _doneRevSending = false;
+async function confirmDoneReview(taskId, approved) {
+  if (_doneRevSending) return;
+  const ti = tasks.findIndex(t => String(t.id) === String(taskId)); if (ti < 0) return;
+  const t = tasks[ti];
+  let note = '';
+  if (!approved) {
+    note = prompt('Lý do từ chối (BẮT BUỘC – sẽ gửi cho người thực hiện):');
+    if (note === null) return;                                  // bấm Huỷ
+    note = note.trim();
+    if (!note) { toast('Phải nhập lý do từ chối mới gửi được', 'err'); return; }
+  }
+  _doneRevSending = true;
+  if (!t.statusHistory) t.statusHistory = [];
+  if (approved) {
+    t.status = 'Hoàn thành'; t.progress = 100;
+    if (!t.doneDate) t.doneDate = todayStr();
+    t.doneReview = { status:'approved', requestedAt:(t.doneReview&&t.doneReview.requestedAt)||'', reviewedAt:fmtVN(todayStr()), reviewNote:'' };
+    t.statusHistory.push({ type:'CLOSE_TASK', actor:'PC - Mr. Minh', oldStatus:'Đang làm', progress:100, ..._tsNow() });
+  } else {
+    t.status = 'Đang làm';
+    t.doneReview = { status:'rejected', requestedAt:(t.doneReview&&t.doneReview.requestedAt)||'', reviewedAt:fmtVN(todayStr()), reviewNote:note };
+    if (note) t.issue = (t.issue ? t.issue + ' | ' : '') + 'Từ chối HT: ' + note;
+    t.statusHistory.push({ type:'ADD_COMMENT', actor:'PC - Mr. Minh', note:'Từ chối hoàn thành: ' + note, ..._tsNow() });
+  }
+  saveTasks(); render();
+  if (WA_URL) {
+    try {
+      await fetch(WA_URL, { method:'POST', body: JSON.stringify({ action:'doneReview', task:{ id:t.id, name:t.name, person:t.person }, approved, note, token: SECRET_TOKEN })});
+    } catch(e) {}
+  }
+  _pushSubtasks(t.id);   // đồng bộ doneReview + lịch sử
+  toast(approved ? '✓ Đã duyệt hoàn thành – đã đóng việc' : '✗ Đã từ chối hoàn thành (đã báo người thực hiện)', approved ? 'ok' : 'err');
+  _renderDoneReviewBox();
+  _doneRevSending = false;
+}
+
 function _renderDlReqBox() {
   const box = document.getElementById('dlReqBox');
   if (!box) return;
@@ -1007,6 +1065,7 @@ function openModal(id) {
   // Preserve subtasks (không hiển thị trong modal, quản lý qua nút ＋)
   _modalSubtasks = t ? JSON.parse(JSON.stringify(t.subtasks || [])) : [];
   _renderDlReqBox();
+  _renderDoneReviewBox();
   document.getElementById('modalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('f_name').focus(), 80);
 }
@@ -1180,28 +1239,35 @@ async function saveReport() {
   }
 
   // ── BÁO CÁO CHO CÔNG VIỆC CHÍNH ─────────────────────────────
+  // Báo 100% → KHÔNG đóng ngay, chuyển "chờ PC/PM duyệt hoàn thành"
+  const _pendingAlready = !!(t.doneReview && t.doneReview.status === 'pending');
+  const keepOpen = (progress >= 100 && t.status !== 'Hoàn thành');   // chưa được duyệt → giữ Đang làm
+  const needDoneReview = keepOpen && !_pendingAlready;               // chỉ gửi email xin duyệt lần đầu
+  const mStatus = keepOpen ? 'Đang làm' : status;
+
   let doneDate = (t.doneDate || '').slice(0,10);
-  if (status === 'Hoàn thành' && !doneDate) doneDate = todayStr();
-  if (status !== 'Hoàn thành') doneDate = '';
+  if (mStatus === 'Hoàn thành' && !doneDate) doneDate = todayStr();
+  if (mStatus !== 'Hoàn thành') doneDate = '';
 
   const actor = t.person || 'Nhân viên';
   const hist = t.statusHistory ? [...t.statusHistory] : [];
-  if ((parseInt(t.progress)||0) !== progress || t.status !== status) {
-    if (status === 'Hoàn thành' && t.status !== 'Hoàn thành') {
+  if ((parseInt(t.progress)||0) !== progress || t.status !== mStatus) {
+    if (mStatus === 'Hoàn thành' && t.status !== 'Hoàn thành') {
       hist.push({type:'CLOSE_TASK', actor, oldStatus:t.status, progress:100, ..._tsNow()});
       if (t.deadline) {
         const diffDays = Math.ceil((new Date(t.deadline) - new Date(doneDate || todayStr())) / 86400000);
         hist.push({type:'EVALUATE_TASK', days:diffDays, ..._tsNow()});
       }
     } else {
-      hist.push({type:'UPDATE_STATUS', actor, oldStatus:t.status, newStatus:status, oldProgress:t.progress, progress, ..._tsNow()});
+      hist.push({type:'UPDATE_STATUS', actor, oldStatus:t.status, newStatus:mStatus, oldProgress:t.progress, progress, ..._tsNow()});
     }
   }
   if ((t.issue||'').trim()  !== issue  && issue)  hist.push({type:'ADD_ISSUE',   actor, issue,  ..._tsNow()});
   if ((t.result||'').trim() !== result && result) hist.push({type:'ADD_COMMENT', actor, result, ..._tsNow()});
 
-  Object.assign(t, { progress, issue, result, status, doneDate, lyDo, statusHistory: hist });
+  Object.assign(t, { progress, issue, result, status:mStatus, doneDate, lyDo, statusHistory: hist });
   t.resultImages = _finalImgs;
+  if (needDoneReview) t.doneReview = { status:'pending', requestedAt:fmtVN(todayStr()), result };
   saveTasks(); render();
 
   // Đồng bộ về Google Sheet (cột Tiến độ H, Vướng mắc J, Kết quả N, Lý do R)
@@ -1209,10 +1275,15 @@ async function saveReport() {
     try {
       await fetch(WA_URL, { method:'POST', body: JSON.stringify({
         action:'updateTask',
-        task:{ id:t.id, name:t.name, person:t.person, progress, issue, result, status, doneDate, lyDo },
+        task:{ id:t.id, name:t.name, person:t.person, progress, issue, result, status:mStatus, doneDate, lyDo },
         token: SECRET_TOKEN
       })});
     } catch(e) { toast('Đã lưu cục bộ, lỗi đồng bộ Sheet', 'err'); }
+  }
+  // Báo 100% → gửi email xin duyệt hoàn thành (PC + PM)
+  if (needDoneReview && WA_URL) {
+    fetch(WA_URL, { method:'POST', body: JSON.stringify({ action:'requestDone', task:{ id:t.id, name:t.name, person:t.person, result }, token: SECRET_TOKEN })})
+      .then(r=>r.json()).then(j=>{ if(j&&j.ok) toast('Đã gửi xin duyệt hoàn thành (PC + PM)','ok'); }).catch(()=>{});
   }
 
   // Nếu có yêu cầu dời hạn → tạo yêu cầu + gửi email phê duyệt (PC + PM)
@@ -1557,6 +1628,7 @@ function taskRow(t, stt) {
         <span style="min-width:0;"><span style="font-weight:800;color:#1a56db;">${stt!=null?stt+'. ':''}</span>${esc(t.name)}</span>
         ${stBadge2}
         ${dlrPending?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:600;">⏳ Chờ dời hạn</span>`:''}
+        ${(t.doneReview&&t.doneReview.status==='pending')?`<span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-weight:600;">⏳ Chờ duyệt HT</span>`:''}
       </div>
       ${t.note?`<div class="task-note">${esc(t.note.substring(0,60))}${t.note.length>60?'...':''}</div>`:''}
     </td>
@@ -2377,7 +2449,7 @@ function _pushSubtasks(taskId) {
   const t = tasks.find(x => String(x.id) === String(taskId));
   if (!t) return;
   fetch(WA_URL, { method:'POST', body: JSON.stringify({
-    action:'syncSubtasks', task:{ id:t.id, name:t.name, subtasks:t.subtasks||[], ccMembers:t.ccMembers||[], statusHistory:t.statusHistory||[], resultImages:t.resultImages||[] }, token: SECRET_TOKEN
+    action:'syncSubtasks', task:{ id:t.id, name:t.name, subtasks:t.subtasks||[], ccMembers:t.ccMembers||[], statusHistory:t.statusHistory||[], resultImages:t.resultImages||[], doneReview:t.doneReview||null }, token: SECRET_TOKEN
   })}).catch(()=>{});
 }
 
