@@ -1411,10 +1411,14 @@ function getFiltered() {
     if (f.priority && (t.priority||'').toLowerCase() !== f.priority) return false;
     if (f.deadline && !((fmtVN(t.deadline||'')||'').toLowerCase().includes(f.deadline) || (t.deadline||'').includes(f.deadline))) return false;
     if (f.doneDate && !((fmtVN((t.doneDate||'').slice(0,10))||'').toLowerCase().includes(f.doneDate))) return false;
-    // Trạng thái: ưu tiên chipFilter (bấm từ thẻ thống kê), nếu không có thì dùng ô lọc cột
-    if (chipFilter==='_over') { if(!(t.deadline&&t.deadline<td&&t.status!=='Hoàn thành')) return false; }
-    else if (chipFilter) { if (t.status!==chipFilter) return false; }
-    else if (f.status) { if ((t.status||'').toLowerCase() !== f.status) return false; }
+    // Trạng thái: tính cả task con (việc hiện nếu chính nó HOẶC 1 task con khớp)
+    const _st = t.subtasks || [];
+    const _matchSt = (s) => t.status===s || _st.some(x => x.status===s);
+    const _matchOver = () => (t.deadline&&t.deadline<td&&t.status!=='Hoàn thành')
+                          || _st.some(x => x.deadline&&x.deadline<td&&x.status!=='Hoàn thành');
+    if (chipFilter==='_over') { if(!_matchOver()) return false; }
+    else if (chipFilter) { if (!_matchSt(chipFilter)) return false; }
+    else if (f.status) { if (!((t.status||'').toLowerCase()===f.status || _st.some(x => (x.status||'').toLowerCase()===f.status))) return false; }
     if (f.progress && !String(parseInt(t.progress)||0).includes(f.progress)) return false;
     if (f.issue && !((t.issue||'').toLowerCase().includes(f.issue))) return false;
     return true;
@@ -1670,10 +1674,17 @@ function renderStats() {
 }
 
 function calcStats() {
-  const td=todayStr();
-  return { total:tasks.length, todo:tasks.filter(t=>t.status==='Chưa làm').length,
-    doing:tasks.filter(t=>t.status==='Đang làm').length, done:tasks.filter(t=>t.status==='Hoàn thành').length,
-    overdue:tasks.filter(t=>t.deadline&&t.deadline<td&&t.status!=='Hoàn thành').length };
+  const td = todayStr();
+  let total=0, todo=0, doing=0, done=0, overdue=0;
+  const tally = (it) => {
+    total++;
+    if (it.status==='Chưa làm') todo++;
+    else if (it.status==='Đang làm') doing++;
+    else if (it.status==='Hoàn thành') done++;
+    if (it.deadline && it.deadline < td && it.status!=='Hoàn thành') overdue++;
+  };
+  tasks.forEach(t => { tally(t); (t.subtasks||[]).forEach(s => tally(s)); });   // tính cả task con
+  return { total, todo, doing, done, overdue };
 }
 
 function setChip(v) { chipFilter=v; const el=document.getElementById('cf_status'); if(el) el.value=(v&&v!=='_over')?v:''; render(); }
