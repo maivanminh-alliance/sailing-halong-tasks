@@ -973,7 +973,8 @@ function _renderDoneReviewBox() {
   if (!box) return;
   const t = editId !== null ? tasks.find(x => String(x.id) === String(editId)) : null;
   const dr = t && t.doneReview;
-  if (!dr || dr.status !== 'pending') { box.style.display = 'none'; box.innerHTML = ''; return; }
+  // Hiện ô duyệt khi: đang chờ duyệt, HOẶC đã duyệt nhưng việc chưa chuyển Hoàn thành (kẹt) → cho duyệt lại
+  if (!dr || dr.status === 'rejected' || (t && t.status === 'Hoàn thành')) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = 'block';
   box.innerHTML = `
     <div style="border:1.5px solid #0369a1;background:#f0f9ff;border-radius:8px;padding:11px 13px;margin-bottom:6px;">
