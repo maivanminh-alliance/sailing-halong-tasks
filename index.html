@@ -247,8 +247,8 @@
           <div class="cf-pop" id="cfp_person" onclick="event.stopPropagation()">
             <select id="cf_person" class="cf-in" onchange="render()">
               <option value="">— Tất cả —</option>
-              <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Kiên</option><option>PC - Mr. Minh</option>
-              <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Vũ</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
+              <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Vinh</option><option>PC - Mr. Minh</option>
+              <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Tự</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
               <option>SS - Mr. Việt</option><option>SS - Mr. Nhơn</option>
               <option>SD - Mr. Văn Dũng</option><option>SD - Ms. Tiên</option><option>SD - Mr. Phú</option>
               <option>QSL - Mr. Tỉnh</option><option>QSL - Mr. Ngọc</option><option>QSM - Mr. Quý</option>
@@ -345,8 +345,8 @@
         <div class="field-group"><label class="field-label">Người phụ trách *</label>
           <select id="f_person">
             <option value="">-- Chọn người phụ trách --</option>
-            <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Kiên</option><option>PC - Mr. Minh</option>
-            <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Vũ</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
+            <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Vinh</option><option>PC - Mr. Minh</option>
+            <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Tự</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
             <option>SS - Mr. Việt</option><option>SS - Mr. Nhơn</option>
             <option>SD - Mr. Văn Dũng</option><option>SD - Ms. Tiên</option><option>SD - Mr. Phú</option>
             <option>QSL - Mr. Tỉnh</option><option>QSL - Mr. Ngọc</option><option>QSM - Mr. Quý</option>
@@ -418,8 +418,8 @@
         <div class="field-group"><label class="field-label">Người phụ trách</label>
           <select id="stm_person" onchange="_renderStCcPanel(_getStCcSelected())">
             <option value="">-- Chọn người phụ trách --</option>
-            <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Kiên</option><option>PC - Mr. Minh</option>
-            <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Vũ</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
+            <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Vinh</option><option>PC - Mr. Minh</option>
+            <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Tự</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
             <option>SS - Mr. Việt</option><option>SS - Mr. Nhơn</option>
             <option>SD - Mr. Văn Dũng</option><option>SD - Ms. Tiên</option><option>SD - Mr. Phú</option>
             <option>QSL - Mr. Tỉnh</option><option>QSL - Mr. Ngọc</option><option>QSM - Mr. Quý</option>
@@ -674,7 +674,7 @@ function submitPwModal() {
 // ── CONFIG ───────────────────────────────────────────────────
 const SECRET_TOKEN = 'sailing_bch_2026_secure';
 // (Đã gỡ SHEET_ID & GVIZ_URL khỏi web app – không đọc trực tiếp Sheet nữa, có thể khoá Sheet riêng tư)
-const MEMBERS   = ['PD - Mr. Tuấn Anh','PM - Mr. Kiên','PC - Mr. Minh','SM - Mr. Thế Dũng','SM - Mr. Vũ','SM - Mr. Vương','SM - Mr. Đoàn','SS - Mr. Việt','SS - Mr. Nhơn','SD - Mr. Văn Dũng','SD - Ms. Tiên','SD - Mr. Phú','QSL - Mr. Tỉnh','QSL - Mr. Ngọc','QSM - Mr. Quý','QAQC - Mr. Mạnh','Thư ký - Ms. Trinh'];
+const MEMBERS   = ['PD - Mr. Tuấn Anh','PM - Mr. Vinh','PC - Mr. Minh','SM - Mr. Thế Dũng','SM - Mr. Tự','SM - Mr. Vương','SM - Mr. Đoàn','SS - Mr. Việt','SS - Mr. Nhơn','SD - Mr. Văn Dũng','SD - Ms. Tiên','SD - Mr. Phú','QSL - Mr. Tỉnh','QSL - Mr. Ngọc','QSM - Mr. Quý','QAQC - Mr. Mạnh','Thư ký - Ms. Trinh'];
 
 const PROJECT_NAME = 'Sailing Hạ Long';
 let WA_URL      = 'https://script.google.com/macros/s/AKfycbxEA4s04h1U623zNy-oMaj7OoUlDphfNw_3rZL9p-ZDJuYk7JR2PU2embYnDJrklIwH-A/exec';
@@ -2231,7 +2231,7 @@ function renderCcMembers(selected) {
   const panel = document.getElementById('ccDropPanel');
   if (!panel) return;
   const currentPerson = document.getElementById('f_person').value;
-  const skip = new Set(['PC - Mr. Minh','PM - Mr. Kiên', currentPerson].filter(Boolean));
+  const skip = new Set(['PC - Mr. Minh','PM - Mr. Vinh', currentPerson].filter(Boolean));
   panel.innerHTML = MEMBERS.filter(m=>!skip.has(m)).map(m=>
     `<label class="cc-opt">
       <input type="checkbox" value="${esc(m)}" ${selected.includes(m)?'checked':''}>
@@ -2595,7 +2595,7 @@ function closeSubtaskModal() {
 
 function _renderStCcPanel(selected) {
   const panel=document.getElementById('stCcDropPanel'); if(!panel) return;
-  const skip=new Set(['PC - Mr. Minh','PM - Mr. Kiên',document.getElementById('stm_person').value].filter(Boolean));
+  const skip=new Set(['PC - Mr. Minh','PM - Mr. Vinh',document.getElementById('stm_person').value].filter(Boolean));
   panel.innerHTML=MEMBERS.filter(m=>!skip.has(m)).map(m=>
     `<label class="cc-opt"><input type="checkbox" value="${esc(m)}" ${selected.includes(m)?'checked':''}><span>${esc(m)}</span></label>`
   ).join('');
@@ -2772,7 +2772,7 @@ async function confirmDlReview() {
 }
 
 // ── THÔNG BÁO ────────────────────────────────────────────────
-const NOTICE_DEFAULT_CC = ['PM - Mr. Kiên', 'PC - Mr. Minh'];
+const NOTICE_DEFAULT_CC = ['PM - Mr. Vinh', 'PC - Mr. Minh'];
 
 function openNotice() {
   if (!ensureAdmin(() => openNotice())) return;   // 🔒 khoá thông báo công việc
