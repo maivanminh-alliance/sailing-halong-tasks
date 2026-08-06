@@ -239,13 +239,13 @@
       <tr>
         <th class="cf-th" onclick="toggleColFilter('name',event)">Công việc <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_name" onclick="event.stopPropagation()">
-            <input id="cf_name" class="cf-in" type="text" oninput="render()" placeholder="🔍 Tìm tên công việc...">
+            <input id="cf_name" class="cf-in" type="text" oninput="renderSoon()" placeholder="🔍 Tìm tên công việc...">
             <span class="cf-clear-col" onclick="clearOneFilter('name')">✕ Xoá lọc cột này</span>
           </div>
         </th>
         <th class="cf-th" style="min-width:100px;" onclick="toggleColFilter('person',event)">Người phụ trách <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_person" onclick="event.stopPropagation()">
-            <select id="cf_person" class="cf-in" onchange="render()">
+            <select id="cf_person" class="cf-in" onchange="renderSoon()">
               <option value="">— Tất cả —</option>
               <option>PD - Mr. Tuấn Anh</option><option>PM - Mr. Vinh</option><option>PC - Mr. Minh</option>
               <option>SM - Mr. Thế Dũng</option><option>SM - Mr. Tự</option><option>SM - Mr. Vương</option><option>SM - Mr. Đoàn</option>
@@ -259,13 +259,13 @@
         </th>
         <th class="cf-th" style="min-width:100px;" onclick="toggleColFilter('cc',event)">Người nhận TT <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_cc" onclick="event.stopPropagation()">
-            <input id="cf_cc" class="cf-in" type="text" oninput="render()" placeholder="🔍 Tìm người nhận...">
+            <input id="cf_cc" class="cf-in" type="text" oninput="renderSoon()" placeholder="🔍 Tìm người nhận...">
             <span class="cf-clear-col" onclick="clearOneFilter('cc')">✕ Xoá lọc cột này</span>
           </div>
         </th>
         <th class="cf-th" onclick="toggleColFilter('category',event)">Hạng mục <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_category" onclick="event.stopPropagation()">
-            <select id="cf_category" class="cf-in" onchange="render()">
+            <select id="cf_category" class="cf-in" onchange="renderSoon()">
               <option value="">— Tất cả —</option>
               <option>Kỹ thuật</option><option>Vật tư</option><option>Nhân lực</option>
               <option>Hành chính</option><option>Tài chính</option><option>An toàn</option><option>Báo cáo</option><option>Khác</option>
@@ -275,7 +275,7 @@
         </th>
         <th class="cf-th" onclick="toggleColFilter('priority',event)">Ưu tiên <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_priority" onclick="event.stopPropagation()">
-            <select id="cf_priority" class="cf-in" onchange="render()">
+            <select id="cf_priority" class="cf-in" onchange="renderSoon()">
               <option value="">— Tất cả —</option><option>Cao</option><option>Trung bình</option><option>Thấp</option>
             </select>
             <span class="cf-clear-col" onclick="clearOneFilter('priority')">✕ Xoá lọc cột này</span>
@@ -283,19 +283,19 @@
         </th>
         <th class="cf-th" onclick="toggleColFilter('deadline',event)">Deadline <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_deadline" onclick="event.stopPropagation()">
-            <input id="cf_deadline" class="cf-in" type="text" oninput="render()" placeholder="vd: 15/06 hoặc 2026-06">
+            <input id="cf_deadline" class="cf-in" type="text" oninput="renderSoon()" placeholder="vd: 15/06 hoặc 2026-06">
             <span class="cf-clear-col" onclick="clearOneFilter('deadline')">✕ Xoá lọc cột này</span>
           </div>
         </th>
         <th class="cf-th" style="min-width:90px;" onclick="toggleColFilter('doneDate',event)">Ngày xong <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_doneDate" onclick="event.stopPropagation()">
-            <input id="cf_doneDate" class="cf-in" type="text" oninput="render()" placeholder="vd: 13/06">
+            <input id="cf_doneDate" class="cf-in" type="text" oninput="renderSoon()" placeholder="vd: 13/06">
             <span class="cf-clear-col" onclick="clearOneFilter('doneDate')">✕ Xoá lọc cột này</span>
           </div>
         </th>
         <th class="cf-th" onclick="toggleColFilter('status',event)">Trạng thái <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_status" onclick="event.stopPropagation()">
-            <select id="cf_status" class="cf-in" onchange="render()">
+            <select id="cf_status" class="cf-in" onchange="renderSoon()">
               <option value="">— Tất cả —</option><option>Chưa làm</option><option>Đang làm</option><option>Hoàn thành</option>
             </select>
             <span class="cf-clear-col" onclick="clearOneFilter('status')">✕ Xoá lọc cột này</span>
@@ -303,13 +303,13 @@
         </th>
         <th class="cf-th" onclick="toggleColFilter('progress',event)">Tiến độ <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_progress" onclick="event.stopPropagation()">
-            <input id="cf_progress" class="cf-in" type="text" oninput="render()" placeholder="vd: 100 hoặc 50">
+            <input id="cf_progress" class="cf-in" type="text" oninput="renderSoon()" placeholder="vd: 100 hoặc 50">
             <span class="cf-clear-col" onclick="clearOneFilter('progress')">✕ Xoá lọc cột này</span>
           </div>
         </th>
         <th class="cf-th" onclick="toggleColFilter('issue',event)">Vướng mắc <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_issue" onclick="event.stopPropagation()">
-            <input id="cf_issue" class="cf-in" type="text" oninput="render()" placeholder="🔍 Tìm vướng mắc...">
+            <input id="cf_issue" class="cf-in" type="text" oninput="renderSoon()" placeholder="🔍 Tìm vướng mắc...">
             <span class="cf-clear-col" onclick="clearOneFilter('issue')">✕ Xoá lọc cột này</span>
           </div>
         </th>
@@ -320,6 +320,7 @@
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
+  <div id="pagerBar" style="display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px 4px 0;font-size:13px;"></div>
 </div>
 
 <!-- DASHBOARD VIEW -->
@@ -1426,12 +1427,84 @@ function getFiltered() {
   });
 }
 
+// ── PHÂN TRANG ───────────────────────────────────────────────
+// Dựng HTML cho 10.000 dòng cùng lúc sẽ treo trình duyệt, nên bảng chỉ
+// dựng đúng số dòng của trang hiện tại. Lọc / thống kê vẫn chạy trên
+// TOÀN BỘ dữ liệu nên số liệu không đổi.
+let _page = 1;
+let _pageSize = parseInt(localStorage.getItem('bch_page_size') || '50') || 50;
+
+function setPageSize(v) {
+  _pageSize = v === 'all' ? Infinity : (parseInt(v) || 50);
+  localStorage.setItem('bch_page_size', v === 'all' ? 'all' : String(_pageSize));
+  _page = 1; render();
+}
+function gotoPage(p) {
+  _page = p; render();
+  const w = document.querySelector('.table-wrap');
+  if (w) w.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function _renderPager(total, from, to, totalPages) {
+  const bar = document.getElementById('pagerBar');
+  if (!bar) return;
+  const opts = [50,100,200,500,'all'].map(v => {
+    const val = v === 'all' ? 'all' : v;
+    const sel = (v === 'all' ? _pageSize === Infinity : _pageSize === v) ? ' selected' : '';
+    return `<option value="${val}"${sel}>${v === 'all' ? 'Tất cả' : v + ' dòng'}</option>`;
+  }).join('');
+  if (totalPages <= 1) {
+    bar.style.display = 'flex';
+    bar.innerHTML = `<span style="color:var(--gray-500);">Hiển thị <b>${total}</b> việc</span>
+      <select onchange="setPageSize(this.value)" style="padding:5px 8px;border:1px solid var(--gray-300);border-radius:6px;font-size:12px;">${opts}</select>`;
+    return;
+  }
+  const btn = (label, p, disabled, active) =>
+    `<button onclick="gotoPage(${p})" ${disabled?'disabled':''} style="min-width:34px;padding:5px 9px;border:1px solid ${active?'var(--primary)':'var(--gray-300)'};background:${active?'var(--primary)':'white'};color:${active?'white':disabled?'var(--gray-300)':'var(--gray-700)'};border-radius:6px;font-weight:${active?'700':'500'};cursor:${disabled?'not-allowed':'pointer'};font-size:12px;">${label}</button>`;
+
+  // Chỉ hiện tối đa 7 nút số quanh trang hiện tại
+  let start = Math.max(1, _page - 3), end = Math.min(totalPages, start + 6);
+  start = Math.max(1, end - 6);
+  let nums = '';
+  if (start > 1) nums += btn('1', 1, false, false) + (start > 2 ? '<span style="color:var(--gray-300);">…</span>' : '');
+  for (let p = start; p <= end; p++) nums += btn(String(p), p, false, p === _page);
+  if (end < totalPages) nums += (end < totalPages-1 ? '<span style="color:var(--gray-300);">…</span>' : '') + btn(String(totalPages), totalPages, false, false);
+
+  bar.style.display = 'flex';
+  bar.innerHTML =
+    `<span style="color:var(--gray-500);">Việc <b>${from}</b>–<b>${to}</b> / <b>${total}</b></span>
+     <select onchange="setPageSize(this.value)" style="padding:5px 8px;border:1px solid var(--gray-300);border-radius:6px;font-size:12px;">${opts}</select>
+     ${btn('‹ Trước', _page-1, _page<=1, false)}${nums}${btn('Sau ›', _page+1, _page>=totalPages, false)}`;
+}
+
 function render() {
   const filtered = getFiltered(); renderStats(); markColFilterActive();
   const body = document.getElementById('tableBody');
-  if (!filtered.length) { body.innerHTML='<tr><td colspan="13"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>'; return; }
-  if (viewMode==='person') renderByPerson(filtered, body);
-  else renderFlat(filtered, body);
+  const bar  = document.getElementById('pagerBar');
+  if (!filtered.length) {
+    body.innerHTML='<tr><td colspan="13"><div class="empty"><div style="font-size:36px;margin-bottom:10px">📋</div>Không có công việc nào</div></td></tr>';
+    if (bar) bar.style.display = 'none';
+    return;
+  }
+  const total      = filtered.length;
+  const totalPages = _pageSize === Infinity ? 1 : Math.max(1, Math.ceil(total / _pageSize));
+  if (_page > totalPages) _page = totalPages;
+  if (_page < 1) _page = 1;
+  const offset = _pageSize === Infinity ? 0 : (_page - 1) * _pageSize;
+  const pageRows = _pageSize === Infinity ? filtered : filtered.slice(offset, offset + _pageSize);
+
+  if (viewMode==='person') renderByPerson(pageRows, body, offset);
+  else renderFlat(pageRows, body, offset);
+  _renderPager(total, offset + 1, offset + pageRows.length, totalPages);
+}
+
+// Gõ vào ô lọc thì chờ người dùng ngừng gõ mới lọc lại — tránh lọc + dựng
+// bảng sau MỖI ký tự khi dữ liệu lớn.
+let _renderTimer = null;
+function renderSoon() {
+  _page = 1;                       // đổi bộ lọc → về trang 1
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(render, 180);
 }
 
 // Trạng thái mở/đóng task con trong bảng
@@ -1534,18 +1607,20 @@ function _quickAddStRow(taskId) {
   </tr>`;
 }
 
-function renderFlat(filtered, body) {
+function renderFlat(filtered, body, offset) {
+  offset = offset || 0;
   body.innerHTML = filtered.map((t, _i) => {
-    const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t, _i+1) : '';
+    const stt = offset + _i + 1;
+    const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t, stt) : '';
     const addRow = _addingStTo!==null && String(_addingStTo)===String(t.id) ? _quickAddStRow(t.id) : '';
-    return taskRow(t, _i+1) + stRows + addRow;
+    return taskRow(t, stt) + stRows + addRow;
   }).join('');
 }
 
-function renderByPerson(filtered, body) {
+function renderByPerson(filtered, body, offset) {
   const grouped = {}; filtered.forEach(t => { if(!grouped[t.person]) grouped[t.person]=[]; grouped[t.person].push(t); });
   const keys = MEMBERS.filter(m => grouped[m]).concat(Object.keys(grouped).filter(k=>!MEMBERS.includes(k)));
-  let _stt = 0;
+  let _stt = offset || 0;
   body.innerHTML = keys.map(p => {
     const pts=grouped[p]; const done=pts.filter(t=>t.status==='Hoàn thành').length;
     const stTotal=pts.reduce((s,t)=>(s+(t.subtasks||[]).length),0);
@@ -1688,7 +1763,7 @@ function calcStats() {
   return { total, todo, doing, done, overdue };
 }
 
-function setChip(v) { chipFilter=v; const el=document.getElementById('cf_status'); if(el) el.value=(v&&v!=='_over')?v:''; render(); }
+function setChip(v) { chipFilter=v; const el=document.getElementById('cf_status'); if(el) el.value=(v&&v!=='_over')?v:''; _page=1; render(); }
 
 function setView(mode) {
   viewMode = mode;
@@ -1753,6 +1828,12 @@ function renderGantt() {
       : '<div style="text-align:center;padding:40px;color:var(--gray-500);">Chưa có dữ liệu</div>';
     return;
   }
+
+  // Gantt vẽ mỗi việc thành 1 hàng dài hàng chục ô ngày → giới hạn số việc vẽ
+  // để không treo trình duyệt. Lọc theo người / trạng thái để xem phần còn lại.
+  const GANTT_MAX = 300;
+  const ganttDu = all.length > GANTT_MAX;
+  if (ganttDu) all.length = GANTT_MAX;
 
   const td = todayStr();
   const today = new Date(td);
@@ -2030,6 +2111,7 @@ function renderGantt() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">🗓 Tiến độ công việc – ${PROJECT_NAME}</h2>
     </div>
+    ${ganttDu?`<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:12px;color:#92400e;">Đang hiển thị <b>${GANTT_MAX}</b> việc gần hạn nhất để biểu đồ chạy mượt. Dùng bộ lọc phía trên để xem nhóm việc khác.</div>`:''}
     ${legend}
     <div class="gantt-scroll">
       <!-- HEADER ROW: sticky top -->
@@ -2756,11 +2838,24 @@ async function confirmDlReview() {
   tasks[ti].dlRequests[ri].status=approved?'approved':'rejected';
   tasks[ti].dlRequests[ri].reviewedAt=fmtVN(todayStr());
   tasks[ti].dlRequests[ri].reviewNote=note;
-  if (approved) tasks[ti].deadline=tasks[ti].dlRequests[ri].newDate;
+  if (approved) {
+    tasks[ti].deadline=tasks[ti].dlRequests[ri].newDate;
+    // Gia hạn deadline = việc CHƯA xong → không được để việc nằm ở "Hoàn thành"
+    if (tasks[ti].status==='Hoàn thành') {
+      tasks[ti].status=(parseInt(tasks[ti].progress)||0)>=1?'Đang làm':'Chưa làm';
+      tasks[ti].doneDate='';
+    }
+  }
   saveTasks(); _pushDlReq(taskId);   // đồng bộ trạng thái duyệt cho mọi người
   if (WA_URL) {
     try {
       const t=tasks[ti], req=t.dlRequests[ri];
+      // Ghi deadline mới + trạng thái xuống Sheet, nếu không sẽ bị ghi đè lại khi tải lại
+      if (approved) {
+        await fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'updateTask',
+          task:{id:t.id,name:t.name,person:t.person,deadline:t.deadline,status:t.status,doneDate:t.doneDate||''},
+          token:SECRET_TOKEN})});
+      }
       await fetch(WA_URL,{method:'POST',body:JSON.stringify({action:'dlReview',task:{id:t.id,name:t.name,person:t.person,newDate:req.newDate,approved,note},token:SECRET_TOKEN})});
     } catch(e) {}
   }
@@ -3343,7 +3438,37 @@ function _eventMeta(type) {
 }
 
 let _infoDetailTab = 'detail'; // 'detail' | 'history'
-function saveTasks() { localStorage.setItem('bch_tasks_v3', JSON.stringify(tasks)); }
+// Lưu cache xuống localStorage.
+// • Gộp nhiều lần gọi liên tiếp thành 1 lần ghi (stringify 10.000 việc rất nặng).
+// • localStorage chỉ ~5MB: nếu tràn thì lưu bản rút gọn (bỏ lịch sử + ảnh),
+//   không để văng lỗi làm hỏng thao tác đang làm. Sheet vẫn là nguồn dữ liệu chính.
+let _saveTimer = null, _saveWarned = false;
+function saveTasks() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(_saveTasksNow, 300);
+}
+function _saveTasksNow() {
+  try {
+    localStorage.setItem('bch_tasks_v3', JSON.stringify(tasks));
+    _saveWarned = false;
+  } catch (e) {
+    try {
+      const gon = tasks.map(t => {
+        const c = Object.assign({}, t);
+        delete c.statusHistory; delete c.serverHistory; delete c.resultImages;
+        return c;
+      });
+      localStorage.setItem('bch_tasks_v3', JSON.stringify(gon));
+      if (!_saveWarned) { _saveWarned = true; toast('Dữ liệu lớn – bộ nhớ tạm chỉ lưu bản rút gọn (Sheet vẫn đủ)', 'err'); }
+    } catch (e2) {
+      try { localStorage.removeItem('bch_tasks_v3'); } catch (e3) {}
+      if (!_saveWarned) { _saveWarned = true; toast('Bộ nhớ tạm đầy – dữ liệu vẫn an toàn trên Google Sheet', 'err'); }
+    }
+  }
+}
+// Đóng/tải lại tab thì ghi ngay, không để mất bản lưu đang chờ
+window.addEventListener('pagehide', function() { clearTimeout(_saveTimer); _saveTasksNow(); });
+
 function setStat(msg) { document.getElementById('syncStatus').textContent=msg; }
 function toast(msg, type='') {
   const el=document.getElementById('toast'); el.textContent=msg; el.className='toast show '+type;
