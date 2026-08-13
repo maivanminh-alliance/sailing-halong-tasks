@@ -143,6 +143,235 @@
   .dl-badge.rejected{background:#fee2e2;color:#991b1b;}
   @media(max-width:700px) { .field-row { grid-template-columns:1fr; } }
 </style>
+
+<!-- ============================================================
+     GIAO DIỆN iOS (Apple Human Interface)
+     Khối này CHỈ đổi hình thức – không đụng HTML/JS.
+     Đặt sau khối CSS gốc để thắng cascade; chỗ nào bị style
+     inline do JS chèn lúc chạy thì mới phải dùng !important.
+     ============================================================ -->
+<style>
+  /* ── 1. Design tokens iOS ───────────────────────────────── */
+  :root {
+    --primary:#007AFF; --primary-light:rgba(0,122,255,.12);
+    --radius:12px;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+    --gray-50:#F2F2F7; --gray-100:#F2F2F7; --gray-200:#E5E5EA;
+    --gray-300:#D1D1D6; --gray-500:#8E8E93; --gray-700:#3C3C43; --gray-900:#000;
+    --ios-sep:rgba(60,60,67,.16);
+    --ios-fill:rgba(118,118,128,.12);
+    --ios-fill-soft:rgba(118,118,128,.08);
+    --ios-green:#34C759; --ios-green-d:#248A3D;
+    --ios-red:#FF3B30;   --ios-orange:#FF9500; --ios-orange-d:#B25000;
+    --ios-purple:#AF52DE;
+  }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue','Segoe UI',system-ui,sans-serif;
+    background:#F2F2F7; letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    -webkit-tap-highlight-color:transparent;
+  }
+  ::selection { background:rgba(0,122,255,.22); }
+
+  /* ── 2. Thanh điều hướng kiểu iOS (mờ, sáng) ─────────────── */
+  .header {
+    background:rgba(249,249,251,.82) !important;
+    -webkit-backdrop-filter:saturate(180%) blur(20px);
+    backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:.5px solid var(--ios-sep) !important;
+    padding:10px 20px !important;
+  }
+  .header .header-left > div:first-child {
+    border:none !important; background:var(--primary) !important; color:#fff !important;
+    border-radius:9px !important; padding:6px 11px !important; letter-spacing:.8px !important;
+  }
+  .header .header-left > div:nth-child(2) > div:first-child {
+    color:#000 !important; font-size:17px !important; font-weight:700 !important; letter-spacing:-.02em !important;
+  }
+  .header .header-left > div:nth-child(2) > div:last-child { color:rgba(60,60,67,.6) !important; }
+  .header > div:nth-child(2) span {
+    background:var(--ios-fill) !important; color:#000 !important; border:none !important;
+    border-radius:999px !important; font-weight:590 !important;
+  }
+  #hdrClock { color:#000 !important; font-weight:700 !important; letter-spacing:-.02em !important; font-variant-numeric:tabular-nums; }
+  #hdrDate  { color:rgba(60,60,67,.6) !important; }
+  .header button {
+    background:var(--ios-fill) !important; color:var(--primary) !important; border:none !important;
+    border-radius:999px !important; width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+  }
+  .header button:active { transform:scale(.92); }
+
+  /* ── 3. Nút bấm ──────────────────────────────────────────── */
+  .btn { border-radius:10px; font-weight:590; letter-spacing:-.01em; transition:opacity .15s,transform .1s,background .15s; }
+  .btn:active { transform:scale(.97); opacity:.72; }
+  .btn-primary { background:var(--primary); } .btn-primary:hover { background:#0071EB; }
+  .btn-outline { background:var(--ios-fill); border:none; color:var(--primary); }
+  .btn-outline:hover { background:rgba(118,118,128,.18); }
+  .btn-danger { background:rgba(255,59,48,.12); color:var(--ios-red); }
+  .btn-danger:hover { background:rgba(255,59,48,.2); }
+  .btn-sm { border-radius:8px; }
+  .actions .btn-outline { width:30px; height:28px; justify-content:center; padding:0; }
+
+  /* ── 4. Segmented control (chuyển view) ──────────────────── */
+  .toolbar > div { background:var(--ios-fill) !important; border-radius:9px !important; padding:2px !important; gap:2px !important; }
+  #btnList,#btnGantt,#btnDash,#btnNoticeTree {
+    border-radius:7px !important; color:#000 !important; padding:6px 14px !important;
+    box-shadow:none !important; transition:background .18s !important;
+  }
+  #btnList[style*="background: white"],#btnGantt[style*="background: white"],
+  #btnDash[style*="background: white"],#btnNoticeTree[style*="background: white"] {
+    box-shadow:0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04) !important;
+  }
+
+  /* ── 5. Thẻ số liệu (JS dựng inline → cần !important) ────── */
+  #statsBoard { background:transparent !important; border-bottom:none !important; padding:14px 20px 2px !important; gap:10px !important; }
+  #statsBoard > div {
+    background:#fff !important; border:none !important; border-radius:14px !important;
+    box-shadow:var(--shadow) !important; padding:14px 12px !important; transition:transform .12s !important;
+  }
+  #statsBoard > div:active { transform:scale(.97) !important; }
+  #statsBoard > div > div:first-child { font-weight:600 !important; letter-spacing:.01em !important; }
+  #statsBoard > div > div:last-child  { font-size:30px !important; font-weight:700 !important; letter-spacing:-.03em !important; }
+
+  /* ── 6. Bảng kiểu inset grouped list ─────────────────────── */
+  table { border-radius:14px; box-shadow:var(--shadow); }
+  thead tr { background:#fff; }
+  th {
+    text-transform:none; letter-spacing:-.01em; font-size:13px; font-weight:600;
+    color:rgba(60,60,67,.6); border-bottom:.5px solid var(--ios-sep);
+  }
+  td { border-bottom:.5px solid var(--ios-sep); }
+  tr:hover td { background:rgba(0,122,255,.045); }
+  .person-header td {
+    background:#F2F2F7 !important; color:rgba(60,60,67,.6) !important;
+    font-size:12px !important; font-weight:600 !important; letter-spacing:.02em;
+  }
+  .task-name { font-weight:590; letter-spacing:-.01em; }
+  .empty { color:var(--gray-500); }
+
+  /* ── 7. Nhãn trạng thái kiểu iOS ─────────────────────────── */
+  .badge { border-radius:999px; font-weight:590; padding:3px 9px; font-size:11.5px; }
+  .badge-cao   { background:rgba(255,59,48,.12);  color:var(--ios-red); }
+  .badge-trung { background:rgba(255,149,0,.15);  color:var(--ios-orange-d); }
+  .badge-thap  { background:rgba(52,199,89,.15);  color:var(--ios-green-d); }
+  .badge-chua  { background:var(--ios-fill);      color:#6B6B70; }
+  .badge-dang  { background:rgba(0,122,255,.12);  color:var(--primary); }
+  .badge-xong  { background:rgba(52,199,89,.15);  color:var(--ios-green-d); }
+  .badge-trehan{ background:rgba(255,59,48,.12);  color:var(--ios-red); }
+  .role-tag, .cc-chip { background:rgba(0,122,255,.1); color:var(--primary); border-radius:999px; font-weight:600; }
+  .today-badge { background:rgba(255,149,0,.15); color:var(--ios-orange-d); border-radius:999px; padding:1px 7px; }
+  .overdue-text { color:var(--ios-red); } .near-text { color:var(--ios-orange-d); }
+  .progress-bar { height:5px; border-radius:999px; background:rgba(118,118,128,.16); }
+  .progress-fill { border-radius:999px; }
+  .progress-label { font-variant-numeric:tabular-nums; }
+
+  /* ── 8. Ô nhập kiểu iOS (nền mờ, viền ẩn) ────────────────── */
+  select, input[type="text"], input[type="date"], input[type="number"], textarea {
+    background:var(--ios-fill-soft); border:.5px solid transparent; border-radius:10px;
+    padding:9px 12px; font-size:14px; transition:background .15s,border-color .15s,box-shadow .15s;
+  }
+  select:focus, input:focus, textarea:focus {
+    background:#fff; border-color:var(--primary); box-shadow:0 0 0 3.5px rgba(0,122,255,.15);
+  }
+  .field-label { font-size:13px; font-weight:590; color:rgba(60,60,67,.6); letter-spacing:-.01em; }
+
+  /* ── 9. Bộ lọc theo cột – popover ────────────────────────── */
+  .cf-pop {
+    border:.5px solid var(--ios-sep); border-radius:14px; padding:11px;
+    box-shadow:0 10px 34px rgba(0,0,0,.16); background:rgba(255,255,255,.96);
+    -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+  }
+  .cf-in { border-radius:8px; border:.5px solid transparent; background:var(--ios-fill-soft); padding:7px 9px; }
+  .cf-th.active::after { background:var(--primary); }
+  .cf-clear-col { color:var(--ios-red); }
+
+  /* ── 10. Modal kiểu sheet iOS ────────────────────────────── */
+  .modal-overlay { background:rgba(0,0,0,.3); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  .modal { border-radius:16px; box-shadow:0 24px 64px rgba(0,0,0,.22); }
+  .modal-header { border-bottom:.5px solid var(--ios-sep); }
+  .modal-title { font-size:17px; font-weight:700; letter-spacing:-.02em; }
+  .modal-close {
+    background:var(--ios-fill); border-radius:999px; width:29px; height:29px;
+    display:flex; align-items:center; justify-content:center; font-size:15px; color:rgba(60,60,67,.6);
+  }
+  .modal-footer { border-top:.5px solid var(--ios-sep); }
+  .info-tab { font-weight:590; }
+  .info-tab.active { border-bottom-color:var(--primary); }
+  .info-tabs { border-bottom:.5px solid var(--ios-sep); }
+
+  /* ── 11. Task con / chọn người / yêu cầu dời hạn ─────────── */
+  .st-row { border:.5px solid var(--ios-sep); border-radius:12px; }
+  .st-row.done { background:rgba(52,199,89,.07); border-color:rgba(52,199,89,.3); }
+  .st-check, .cc-opt input { accent-color:var(--primary); }
+  .cc-drop-btn { background:var(--ios-fill-soft); border:.5px solid transparent; border-radius:10px; }
+  .cc-drop-panel { border:.5px solid var(--ios-sep); border-radius:14px; box-shadow:0 10px 34px rgba(0,0,0,.16); }
+  .cc-opt { border-bottom:.5px solid var(--ios-sep); }
+  .cc-opt:hover { background:rgba(0,122,255,.06); }
+  .dl-req-card { border:.5px solid var(--ios-sep); border-radius:12px; }
+  .dl-badge { border-radius:999px; font-weight:590; }
+
+  /* ── 12. Gantt ───────────────────────────────────────────── */
+  .gantt-scroll { border:.5px solid var(--ios-sep); border-radius:14px; }
+  .gantt-lc { border-right:.5px solid var(--ios-sep) !important; box-shadow:none !important; }
+  .gantt-row { border-bottom:.5px solid var(--ios-sep); }
+  /* SỬA LỖI (có từ trước, không liên quan giao diện iOS):
+     mỗi hàng Gantt chỉ rộng bằng khung nhìn nên cột tên việc position:sticky
+     hết chỗ bám → cuộn ngang là cột tên trôi mất. Cho hàng rộng bằng đúng
+     nội dung thì cột tên mới dính lại được ở mép trái. */
+  .gantt-scroll > div { width:max-content; min-width:100%; }
+
+  /* ── 13. Thẻ trong Hiệu suất (JS dựng inline) ────────────── */
+  #dashView div[style*="border:1.5px solid #e5e7eb"] {
+    border:none !important; border-radius:16px !important; box-shadow:var(--shadow) !important;
+  }
+
+  /* ── 14. Thanh phân trang ────────────────────────────────── */
+  #pagerBar button { border:none !important; border-radius:9px !important; font-weight:590 !important; }
+  #pagerBar button:active { transform:scale(.95); }
+  #pagerBar select { border-radius:9px; border:.5px solid transparent; background:var(--ios-fill-soft); }
+  #pagerBar { color:rgba(60,60,67,.6); font-variant-numeric:tabular-nums; }
+
+  /* ── 15. Toast kiểu iOS ──────────────────────────────────── */
+  .toast {
+    background:rgba(28,28,30,.86); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+    border-radius:14px; font-weight:590; box-shadow:0 8px 30px rgba(0,0,0,.24);
+  }
+  .toast.ok  { background:rgba(52,199,89,.94); }
+  .toast.err { background:rgba(255,59,48,.94); }
+
+  /* ── 16. Thanh cuộn mảnh ─────────────────────────────────── */
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:rgba(60,60,67,.26); border-radius:999px; }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(60,60,67,.4); }
+  ::-webkit-scrollbar-track { background:transparent; }
+
+  /* ── 17. Màn hình hẹp (iPhone / iPad dọc) ────────────────── */
+  @media (max-width:900px) {
+    /* Nhãn "Người lập" đang absolute giữa thanh đầu → đè lên tên app và
+       đồng hồ khi màn hẹp. Cho nó xuống hàng riêng. */
+    .header { flex-wrap:wrap; gap:10px; }
+    .header > div:nth-child(2) {
+      position:static !important; transform:none !important;
+      order:3; width:100%; text-align:center;
+    }
+    #statsBoard { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) !important; }
+  }
+  @media (max-width:640px) {
+    .header .header-left > div:nth-child(2) > div:first-child { font-size:16px !important; }
+    #hdrClock { font-size:20px !important; }
+    .toolbar { gap:8px; }
+    .toolbar > div { width:100%; overflow-x:auto; }
+    #statsBoard { grid-template-columns:repeat(auto-fit,minmax(108px,1fr)) !important; gap:8px !important; }
+    #statsBoard > div { padding:11px 8px !important; }
+    #statsBoard > div > div:last-child { font-size:25px !important; }
+  }
+
+  /* ── 18. Vùng an toàn iPhone (tai thỏ / thanh Home) ──────── */
+  @supports (padding:env(safe-area-inset-bottom)) {
+    body { padding-bottom:env(safe-area-inset-bottom); }
+    .header { padding-left:max(20px,env(safe-area-inset-left)) !important; padding-right:max(20px,env(safe-area-inset-right)) !important; }
+  }
+</style>
 </head>
 <body>
 
@@ -195,11 +424,6 @@
   <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;border-color:#10b981;color:#065f46;"
     onclick="runAction('caiTriggerSang','Đang cài đặt...',this)">
     [Cài] Tự động 7:30 sáng + cảnh báo
-  </button>
-
-  <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;border-color:#10b981;color:#065f46;"
-    onclick="runAction('caiTriggerSangChieu','Đang cài đặt...',this)">
-    [Cài] Tự động sáng + chiều + cảnh báo
   </button>
 
   <button class="btn btn-outline" style="font-size:12px;padding:6px 12px;border-color:#ef4444;color:#991b1b;"
