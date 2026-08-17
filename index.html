@@ -1726,8 +1726,8 @@ function render() {
   const offset = _pageSize === Infinity ? 0 : (_page - 1) * _pageSize;
   const pageRows = _pageSize === Infinity ? filtered : filtered.slice(offset, offset + _pageSize);
 
-  if (viewMode==='person') renderByPerson(pageRows, body, offset);
-  else renderFlat(pageRows, body, offset);
+  if (viewMode==='person') renderByPerson(pageRows, body);
+  else renderFlat(pageRows, body);
   _renderPager(total, offset + 1, offset + pageRows.length, totalPages);
 }
 
@@ -1840,20 +1840,21 @@ function _quickAddStRow(taskId) {
   </tr>`;
 }
 
-function renderFlat(filtered, body, offset) {
-  offset = offset || 0;
-  body.innerHTML = filtered.map((t, _i) => {
-    const stt = offset + _i + 1;
+// STT hiển thị = ID gốc của công việc (không phải số đếm dòng).
+// Nhờ vậy "việc số 28" luôn là đúng việc đó, dù danh sách đảo thứ tự,
+// lọc hay sang trang khác. Task con ăn theo: 28.1, 28.2…
+function renderFlat(filtered, body) {
+  body.innerHTML = filtered.map(t => {
+    const stt = t.id;
     const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t, stt) : '';
     const addRow = _addingStTo!==null && String(_addingStTo)===String(t.id) ? _quickAddStRow(t.id) : '';
     return taskRow(t, stt) + stRows + addRow;
   }).join('');
 }
 
-function renderByPerson(filtered, body, offset) {
+function renderByPerson(filtered, body) {
   const grouped = {}; filtered.forEach(t => { if(!grouped[t.person]) grouped[t.person]=[]; grouped[t.person].push(t); });
   const keys = MEMBERS.filter(m => grouped[m]).concat(Object.keys(grouped).filter(k=>!MEMBERS.includes(k)));
-  let _stt = offset || 0;
   body.innerHTML = keys.map(p => {
     const pts=grouped[p]; const done=pts.filter(t=>t.status==='Hoàn thành').length;
     const stTotal=pts.reduce((s,t)=>(s+(t.subtasks||[]).length),0);
@@ -1861,10 +1862,10 @@ function renderByPerson(filtered, body, offset) {
     const stInfo = stTotal ? ` &nbsp;·&nbsp; Tasks con: ${stDone}/${stTotal}` : '';
     return `<tr class="person-header"><td colspan="13">${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
       + pts.map(t => {
-        _stt++;
-        const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t, _stt) : '';
+        const stt = t.id;
+        const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t, stt) : '';
         const addRow = _addingStTo!==null && String(_addingStTo)===String(t.id) ? _quickAddStRow(t.id) : '';
-        return taskRow(t, _stt) + stRows + addRow;
+        return taskRow(t, stt) + stRows + addRow;
       }).join('');
   }).join('');
 }
@@ -2149,7 +2150,7 @@ function renderGantt() {
 
     const _rowBgColor = i%2===0?'white':'#f9fafb';
     const _leftCellHtml = `
-      <div style="width:${COLS[0].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca3af;">${i+1}</div>
+      <div style="width:${COLS[0].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca3af;">${t.id}</div>
       <div style="width:${COLS[1].w}px;flex-shrink:0;padding:0 8px;border-right:1px solid #e5e7eb;display:flex;align-items:center;overflow:hidden;">
         <span style="font-size:12px;font-weight:600;color:${isOverdue?'#dc2626':'#111827'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(t.name)}">${esc(t.name)}</span>
       </div>
@@ -2245,7 +2246,7 @@ function renderGantt() {
       const isDang = s.status==='Đang làm';
       const sColor = isDone?'#065f46':isOD?'#dc2626':isDang?'#1e40af':'#92400e';
       const sBg2   = isDone?'#f0fdf4':isOD?'#fff1f2':isDang?'#eff6ff':'#f5f3ff';
-      const stStt  = `${i+1}.${si+1}`;  // e.g. "4.1"
+      const stStt  = `${t.id}.${si+1}`;  // vd "28.1" – ăn theo ID việc mẹ
       const stProg2 = Math.max(0,Math.min(100,parseInt(s.progress)||0));
       const stStatusLabel = isDone?'✓ Xong':isOD?'⚠ Trễ':isDang?'◑ Làm':'○ Chờ';
       const stBorderColor = isDone?'#a7f3d0':isOD?'#fecaca':isDang?'#93c5fd':'#c4b5fd';
