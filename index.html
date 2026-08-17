@@ -1678,9 +1678,11 @@ function gotoPage(p) {
   if (w) w.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-function _renderPager(total, from, to, totalPages) {
+function _renderPager(total, from, to, totalPages, stCount) {
   const bar = document.getElementById('pagerBar');
   if (!bar) return;
+  // Thanh này và ô "TỔNG VIỆC" phía trên đếm giống nhau: chỉ công việc chính.
+  const ghiChuSt = '';
   const opts = [50,100,200,500,'all'].map(v => {
     const val = v === 'all' ? 'all' : v;
     const sel = (v === 'all' ? _pageSize === Infinity : _pageSize === v) ? ' selected' : '';
@@ -1688,8 +1690,8 @@ function _renderPager(total, from, to, totalPages) {
   }).join('');
   if (totalPages <= 1) {
     bar.style.display = 'flex';
-    bar.innerHTML = `<span style="color:var(--gray-500);">Hiển thị <b>${total}</b> việc</span>
-      <select onchange="setPageSize(this.value)" style="padding:5px 8px;border:1px solid var(--gray-300);border-radius:6px;font-size:12px;">${opts}</select>`;
+    // Chỉ 1 trang → không hiện số đếm, chỉ giữ ô chọn số dòng/trang
+    bar.innerHTML = `<select onchange="setPageSize(this.value)" style="padding:5px 8px;border:1px solid var(--gray-300);border-radius:6px;font-size:12px;">${opts}</select>`;
     return;
   }
   const btn = (label, p, disabled, active) =>
@@ -1728,7 +1730,8 @@ function render() {
 
   if (viewMode==='person') renderByPerson(pageRows, body);
   else renderFlat(pageRows, body);
-  _renderPager(total, offset + 1, offset + pageRows.length, totalPages);
+  const stCount = filtered.reduce((s, t) => s + ((t.subtasks || []).length), 0);
+  _renderPager(total, offset + 1, offset + pageRows.length, totalPages, stCount);
 }
 
 // Gõ vào ô lọc thì chờ người dùng ngừng gõ mới lọc lại — tránh lọc + dựng
@@ -1993,7 +1996,9 @@ function calcStats() {
     else if (it.status==='Hoàn thành') done++;
     if (it.deadline && it.deadline < td && it.status!=='Hoàn thành') overdue++;
   };
-  tasks.forEach(t => { tally(t); (t.subtasks||[]).forEach(s => tally(s)); });   // tính cả task con
+  // CHỈ đếm công việc chính – KHÔNG cộng task con, để số ở ô thống kê
+  // luôn khớp với số dòng ở thanh phân trang và với email báo cáo tổng hợp.
+  tasks.forEach(t => tally(t));
   return { total, todo, doing, done, overdue };
 }
 
