@@ -446,7 +446,7 @@
     <button id="btnDash" class="btn" onclick="setView('dash')" style="padding:6px 12px;font-size:13px;">3. Hiệu suất</button>
     <button id="btnNoticeTree" class="btn" onclick="setView('noticeTree')" style="padding:6px 12px;font-size:13px;">4. Lịch sử TB</button>
   </div>
-  <button class="btn btn-outline" onclick="openEval()" style="border-color:#7c3aed;color:#6d28d9;">📊 Đánh giá tháng</button>
+  <button class="btn btn-outline" onclick="openEval()" style="border-color:#7c3aed;color:#6d28d9;">Đánh giá tháng</button>
 </div>
 
 <!-- (Đã gỡ ô tìm kiếm & 4 bộ lọc – thay bằng bộ lọc theo từng cột ở tiêu đề bảng) -->
@@ -463,7 +463,7 @@
       <tr>
         <th class="cf-th" onclick="toggleColFilter('name',event)">Công việc <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_name" onclick="event.stopPropagation()">
-            <input id="cf_name" class="cf-in" type="text" oninput="renderSoon()" placeholder="🔍 Tìm tên công việc...">
+            <input id="cf_name" class="cf-in" type="text" oninput="renderSoon()" placeholder="Tìm tên công việc...">
             <span class="cf-clear-col" onclick="clearOneFilter('name')">✕ Xoá lọc cột này</span>
           </div>
         </th>
@@ -483,7 +483,7 @@
         </th>
         <th class="cf-th" style="min-width:100px;" onclick="toggleColFilter('cc',event)">Người nhận TT <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_cc" onclick="event.stopPropagation()">
-            <input id="cf_cc" class="cf-in" type="text" oninput="renderSoon()" placeholder="🔍 Tìm người nhận...">
+            <input id="cf_cc" class="cf-in" type="text" oninput="renderSoon()" placeholder="Tìm người nhận...">
             <span class="cf-clear-col" onclick="clearOneFilter('cc')">✕ Xoá lọc cột này</span>
           </div>
         </th>
@@ -533,7 +533,7 @@
         </th>
         <th class="cf-th" onclick="toggleColFilter('issue',event)">Vướng mắc <span class="cf-caret">▾</span>
           <div class="cf-pop" id="cfp_issue" onclick="event.stopPropagation()">
-            <input id="cf_issue" class="cf-in" type="text" oninput="renderSoon()" placeholder="🔍 Tìm vướng mắc...">
+            <input id="cf_issue" class="cf-in" type="text" oninput="renderSoon()" placeholder="Tìm vướng mắc...">
             <span class="cf-clear-col" onclick="clearOneFilter('issue')">✕ Xoá lọc cột này</span>
           </div>
         </th>
@@ -599,7 +599,7 @@
         <input type="date" id="f_doneDate">
       </div>
       <div class="field-group">
-        <label class="field-label">👥 Người nhận thông tin <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(Cc thêm ngoài PC &amp; PM)</span></label>
+        <label class="field-label">Người nhận thông tin <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(Cc thêm ngoài PC &amp; PM)</span></label>
         <div class="cc-drop-wrap">
           <button type="button" id="ccDropBtn" class="cc-drop-btn" onclick="toggleCcDrop(event)">
             <span id="ccDropLabel">Chọn người nhận thêm...</span>
@@ -671,7 +671,7 @@
         <label class="field-label">Ngày hoàn thành</label><input type="date" id="stm_doneDate">
       </div>
       <div class="field-group">
-        <label class="field-label">👥 Người nhận thông tin <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(Cc thêm ngoài PC &amp; PM)</span></label>
+        <label class="field-label">Người nhận thông tin <span style="font-size:10px;color:var(--gray-500);font-weight:400;">(Cc thêm ngoài PC &amp; PM)</span></label>
         <div class="cc-drop-wrap">
           <button type="button" id="stCcDropBtn" class="cc-drop-btn" onclick="toggleStCcDrop(event)">
             <span id="stCcDropLabel">Chọn người nhận thêm...</span>
@@ -687,7 +687,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeSubtaskModal()">Hủy</button>
-      <button class="btn btn-primary" id="stmSaveBtn" onclick="saveSubtaskModal()">💾 Lưu task con</button>
+      <button class="btn btn-primary" id="stmSaveBtn" onclick="saveSubtaskModal()">Lưu task con</button>
     </div>
   </div>
 </div>
@@ -708,7 +708,7 @@
 <div class="modal-overlay" id="evalOverlay" onclick="if(event.target.id==='evalOverlay')closeEval()">
   <div class="modal" style="max-width:860px;">
     <div class="modal-header">
-      <div class="modal-title">📊 Đánh giá hoàn thành công việc theo tháng</div>
+      <div class="modal-title">Đánh giá hoàn thành công việc theo tháng</div>
       <div style="display:flex;align-items:center;gap:10px;">
         <input type="month" id="evalMonth" onchange="renderEval()" style="border:1.5px solid var(--gray-300);border-radius:8px;padding:6px 10px;font-size:13px;">
         <button class="modal-close" onclick="closeEval()">×</button>
@@ -722,7 +722,7 @@
 <div class="modal-overlay" id="noticeOverlay" onclick="if(event.target.id==='noticeOverlay')closeNotice()">
   <div class="modal" style="max-width:600px;">
     <div class="modal-header" style="background:#0369a1;">
-      <div class="modal-title" style="color:white;">📢 Gửi thông báo</div>
+      <div class="modal-title" style="color:white;">Gửi thông báo</div>
       <button class="modal-close" style="color:white;" onclick="closeNotice()">×</button>
     </div>
     <div class="modal-body">
@@ -763,7 +763,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeNotice()">Hủy</button>
-      <button class="btn" style="background:#0369a1;color:white;font-weight:600;" onclick="sendNotice()">📨 Gửi thông báo</button>
+      <button class="btn" style="background:#0369a1;color:white;font-weight:600;" onclick="sendNotice()">Gửi thông báo</button>
     </div>
   </div>
 </div>
@@ -772,7 +772,7 @@
 <div class="modal-overlay" id="reportOverlay" onclick="if(event.target.id==='reportOverlay')closeReport()">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header" style="background:#0369a1;">
-      <div class="modal-title" style="color:white;">📝 Báo cáo công việc</div>
+      <div class="modal-title" style="color:white;">Báo cáo công việc</div>
       <button class="modal-close" style="color:white;" onclick="closeReport()">×</button>
     </div>
     <div class="modal-body">
@@ -813,7 +813,7 @@
         <div id="rp_dropzone" onclick="document.getElementById('rp_image').click()"
           ondragover="_rpDragOver(event,true)" ondragleave="_rpDragOver(event,false)" ondrop="_rpDrop(event)"
           style="border:2px dashed var(--gray-300);border-radius:8px;padding:16px;text-align:center;cursor:pointer;color:var(--gray-500);font-size:13px;background:var(--gray-50);transition:all .15s;">
-          📎 Kéo &amp; thả tệp hoặc ảnh vào đây, hoặc bấm để chọn
+          Kéo &amp; thả tệp hoặc ảnh vào đây, hoặc bấm để chọn
         </div>
         <input type="file" id="rp_image" multiple style="display:none;" onchange="_addRpFiles(this.files); this.value='';">
         <div id="rp_imgList" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;"></div>
@@ -823,7 +823,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeReport()">Hủy</button>
-      <button class="btn" style="background:#0369a1;color:white;font-weight:600;" id="rpSaveBtn" onclick="saveReport()">💾 Gửi báo cáo</button>
+      <button class="btn" style="background:#0369a1;color:white;font-weight:600;" id="rpSaveBtn" onclick="saveReport()">Gửi báo cáo</button>
     </div>
   </div>
 </div>
@@ -1308,7 +1308,7 @@ function _setReportSending(on) {
   b.disabled = on;
   b.style.opacity = on ? '0.65' : '';
   b.style.cursor  = on ? 'not-allowed' : 'pointer';
-  b.innerHTML = on ? '⏳ Đang gửi báo cáo...' : '💾 Gửi báo cáo';
+  b.innerHTML = on ? 'Đang gửi báo cáo...' : 'Gửi báo cáo';
 }
 function openReport(id, stId) {
   const t = tasks.find(x => String(x.id) === String(id));
@@ -1431,7 +1431,7 @@ async function saveReport() {
         else toast('Có tệp không tải được lên', 'err');
       } catch(e) { toast('Lỗi tải ảnh: ' + e.message, 'err'); }
     }
-    if (_b) _b.innerHTML = '⏳ Đang gửi báo cáo...';
+    if (_b) _b.innerHTML = 'Đang gửi báo cáo...';
   } else if (_rpPendingImages.length && !WA_URL) {
     toast('Cần kết nối Web App để tải ảnh lên', 'err');
   }
@@ -1555,12 +1555,12 @@ function openSubtaskInfo(taskId, stId) {
         ${row('Hạng mục',esc(s.category||''),true)}
         ${row('Ưu tiên',s.priority?`<span style="background:${uColor}20;color:${uColor};padding:2px 8px;border-radius:10px;font-weight:700;">${esc(s.priority)}</span>`:'')}
         ${row('Deadline',s.deadline?`<span style="color:#dc2626;font-weight:600;">${fmtVN(s.deadline)}</span>`:'',true)}
-        ${row('Trạng thái',`${sIcon[s.status]||''} ${esc(s.status||'')} · <strong>${parseInt(s.progress)||0}%</strong>`)}
+        ${row('Trạng thái',`${esc(s.status||'')} · <strong>${parseInt(s.progress)||0}%</strong>`)}
         ${row('Ngày hoàn thành',s.doneDate?fmtVN((s.doneDate||'').slice(0,10)):'',true)}
         ${row('Ghi chú',s.note?`<span style="white-space:pre-wrap;">${esc(s.note)}</span>`:'')}
         ${row('Vướng mắc',s.issue?`<span style="color:#c27803;">⚠ ${esc(s.issue)}</span>`:'',true)}
         ${row('Kết quả',s.result?`<span style="white-space:pre-wrap;">${esc(s.result)}</span>`:'')}
-        ${row('Tài liệu',s.doc?`<a href="${esc(s.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu</a>`:'',true)}
+        ${row('Tài liệu',s.doc?`<a href="${esc(s.doc)}" target="_blank" style="color:#1a56db;">Xem tài liệu</a>`:'',true)}
       </table>
       <div style="text-align:right;margin-top:12px;">
         <button class="btn btn-primary" onclick="closeInfo()" style="font-size:12px;padding:6px 16px;">Đóng</button>
@@ -1629,7 +1629,7 @@ function getFiltered() {
     status:_cf('cf_status'), progress:_cf('cf_progress'), issue:_cf('cf_issue')
   };
   const td = todayStr();
-  return tasks.filter(t => {
+  const ds = tasks.filter(t => {
     if (f.name && !((t.name||'').toLowerCase().includes(f.name) || (t.note||'').toLowerCase().includes(f.name))) return false;
     if (f.person && (t.person||'').toLowerCase() !== f.person) return false;
     if (f.cc && !((t.ccMembers||[]).join(' ').toLowerCase().includes(f.cc))) return false;
@@ -1648,6 +1648,15 @@ function getFiltered() {
     if (f.progress && !String(parseInt(t.progress)||0).includes(f.progress)) return false;
     if (f.issue && !((t.issue||'').toLowerCase().includes(f.issue))) return false;
     return true;
+  });
+
+  // Việc MỚI GIAO lên đầu, việc giao lâu rồi xuống dưới.
+  // ID do _nextTaskId_ cấp tăng dần (max+1) nên việc mới nhất luôn có ID lớn nhất
+  // – tin cậy hơn cột Ngày tạo vì cột đó có thể trống. Ngày tạo chỉ dùng phá hoà.
+  return ds.sort((a, b) => {
+    const ia = parseFloat(a.id), ib = parseFloat(b.id);
+    if (!isNaN(ia) && !isNaN(ib) && ia !== ib) return ib - ia;
+    return String(b.created || '').localeCompare(String(a.created || ''));
   });
 }
 
@@ -1762,7 +1771,7 @@ function _subtaskRows(t, parentStt) {
     }
 
     const stClass = (!isDone&&s.deadline&&s.deadline<td)?'trehan':isDone?'xong':isDoing?'dang':'chua';
-    const stBadge = `<span class="badge badge-${stClass}" style="cursor:pointer;" title="Click đổi trạng thái" onclick="cycleSubtaskStatus('${t.id}','${s.id}')">${sIcon[s.status]||'○'} ${s.status||'Chưa làm'}</span>`;
+    const stBadge = `<span class="badge badge-${stClass}" style="cursor:pointer;" title="Click đổi trạng thái" onclick="cycleSubtaskStatus('${t.id}','${s.id}')">${s.status||'Chưa làm'}</span>`;
 
     const person  = s.person || t.person || '';
     const ccHtml  = (s.ccMembers&&s.ccMembers.length)
@@ -1789,10 +1798,10 @@ function _subtaskRows(t, parentStt) {
       <td>${stBadge}</td>
       <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pc}"></div></div><div class="progress-label">${pct}%</div></div></td>
       <td style="max-width:140px;font-size:11px;color:#c27803">${s.issue?`⚠ ${esc(s.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
-      <td style="max-width:140px;font-size:11px">${s.doc?`<a href="${esc(s.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
+      <td style="max-width:140px;font-size:11px">${s.doc?`<a href="${esc(s.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
       <td>${isDone
-        ? `<button class="btn btn-sm" disabled title="Đã hoàn thành – đã khoá báo cáo" style="background:#e5e7eb;color:#9ca3af;font-weight:600;white-space:nowrap;cursor:not-allowed;font-size:11px;">🔒 Đã hoàn thành</button>`
-        : `<button class="btn btn-sm" onclick="openReport('${t.id}','${s.id}')" title="Báo cáo task con" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;font-size:11px;">📝 Báo cáo</button>`}</td>
+        ? `<button class="btn btn-sm" disabled title="Đã hoàn thành – đã khoá báo cáo" style="background:#e5e7eb;color:#9ca3af;font-weight:600;white-space:nowrap;cursor:not-allowed;font-size:11px;">Đã hoàn thành</button>`
+        : `<button class="btn btn-sm" onclick="openReport('${t.id}','${s.id}')" title="Báo cáo task con" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;font-size:11px;">Báo cáo</button>`}</td>
       <td><div class="actions">
         <button class="btn btn-outline btn-sm" onclick="openSubtaskInfo('${t.id}','${s.id}')" title="Chi tiết task con" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
         <button class="btn btn-outline btn-sm" onclick="openSubtaskModal('${t.id}','${s.id}')" style="color:#7c3aed;border-color:#7c3aed;" title="Sửa task con">✏</button>
@@ -1849,8 +1858,8 @@ function renderByPerson(filtered, body, offset) {
     const pts=grouped[p]; const done=pts.filter(t=>t.status==='Hoàn thành').length;
     const stTotal=pts.reduce((s,t)=>(s+(t.subtasks||[]).length),0);
     const stDone=pts.reduce((s,t)=>(s+(t.subtasks||[]).filter(x=>x.status==='Hoàn thành').length),0);
-    const stInfo = stTotal ? ` &nbsp;·&nbsp; 📌 Tasks con: ${stDone}/${stTotal}` : '';
-    return `<tr class="person-header"><td colspan="13">👤 ${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
+    const stInfo = stTotal ? ` &nbsp;·&nbsp; Tasks con: ${stDone}/${stTotal}` : '';
+    return `<tr class="person-header"><td colspan="13">${esc(p)} &nbsp;·&nbsp; ${pts.length} việc &nbsp;·&nbsp; Xong: ${done}/${pts.length}${stInfo}</td></tr>`
       + pts.map(t => {
         _stt++;
         const stRows = (_stOpen[t.id]!==false&&(t.subtasks||[]).length) ? _subtaskRows(t, _stt) : '';
@@ -1914,8 +1923,8 @@ function taskRow(t, stt) {
     else dlHtml=lbl;
   }
   const stBadge=(t.status!=='Hoàn thành'&&t.deadline&&t.deadline<td)
-    ?`<span class="badge badge-trehan">⚠ Trễ hạn</span>`
-    :`<span class="badge badge-${sMap[t.status]||'chua'}">${sIcon[t.status]||''} ${t.status}</span>`;
+    ?`<span class="badge badge-trehan">Trễ hạn</span>`
+    :`<span class="badge badge-${sMap[t.status]||'chua'}">${t.status}</span>`;
   // Nút mở/đóng task con (▶ / ▼)
   const hasSubtasks = stTotal > 0;
   const isOpen = _stOpen[t.id] !== false; // mặc định mở
@@ -1945,10 +1954,10 @@ function taskRow(t, stt) {
     <td>${stBadge}</td>
     <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${p}%;background:${pc}"></div></div><div class="progress-label">${p}%</div></div></td>
     <td style="max-width:140px;font-size:11px;color:#c27803">${t.issue?`⚠ ${esc(t.issue.substring(0,60))}`:'<span style="color:var(--gray-300)">–</span>'}</td>
-    <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">📎 Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
+    <td style="max-width:140px;font-size:11px">${t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:var(--primary);text-decoration:none;">Xem tài liệu</a>`:'<span style="color:var(--gray-300)">–</span>'}</td>
     <td>${t.status==='Hoàn thành'
-      ? `<button class="btn btn-sm" disabled title="Đã hoàn thành – đã khoá báo cáo" style="background:#e5e7eb;color:#9ca3af;font-weight:600;white-space:nowrap;cursor:not-allowed;">🔒 Đã hoàn thành</button>`
-      : `<button class="btn btn-sm" onclick="openReport('${t.id}')" title="Nhân viên tự cập nhật báo cáo" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;">📝 Báo cáo</button>`}</td>
+      ? `<button class="btn btn-sm" disabled title="Đã hoàn thành – đã khoá báo cáo" style="background:#e5e7eb;color:#9ca3af;font-weight:600;white-space:nowrap;cursor:not-allowed;">Đã hoàn thành</button>`
+      : `<button class="btn btn-sm" onclick="openReport('${t.id}')" title="Nhân viên tự cập nhật báo cáo" style="background:#0369a1;color:white;font-weight:600;white-space:nowrap;">Báo cáo</button>`}</td>
     <td><div class="actions">
       <button class="btn btn-outline btn-sm" onclick="openInfo('${t.id}')" title="Chi tiết" style="color:var(--primary);border-color:var(--primary);">ℹ</button>
       <button class="btn btn-outline btn-sm" onclick="openModal('${t.id}')" title="Chỉnh sửa">✏</button>
@@ -1962,7 +1971,7 @@ function renderStats() {
   const s=calcStats();
   const card=(cls,num,lbl,filter,icon,bc,tc)=>`
     <div onclick="${filter}" style="background:white;border:2px solid ${bc};border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .15s;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08);">
-      <div style="font-size:11px;font-weight:600;color:${tc};text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${icon} ${lbl}</div>
+      <div style="font-size:11px;font-weight:600;color:${tc};text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${lbl}</div>
       <div style="font-size:32px;font-weight:800;color:${tc};line-height:1;">${num}</div>
     </div>`;
   document.getElementById('statsBoard').innerHTML =
@@ -2023,7 +2032,7 @@ function _ganttHdrFilter(key, ev) {
   pop.style.cssText = 'position:fixed;z-index:9999;background:white;border:1.5px solid var(--primary);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:9px;min-width:190px;';
   const inStyle = 'width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--gray-300);border-radius:5px;';
   let inner = '';
-  if (key === 'name') inner = `<input id="gfIn" type="text" value="${esc(_ganttFilter.name)}" placeholder="🔍 Lọc tên công việc..." style="${inStyle}" oninput="_ganttFilter.name=this.value;renderGantt();">`;
+  if (key === 'name') inner = `<input id="gfIn" type="text" value="${esc(_ganttFilter.name)}" placeholder="Lọc tên công việc..." style="${inStyle}" oninput="_ganttFilter.name=this.value;renderGantt();">`;
   else if (key === 'person') { const opts = ['<option value="">— Tất cả —</option>'].concat(MEMBERS.map(m=>`<option ${_ganttFilter.person===m?'selected':''}>${esc(m)}</option>`)).join(''); inner = `<select id="gfIn" style="${inStyle}" onchange="_ganttFilter.person=this.value;renderGantt();">${opts}</select>`; }
   else inner = `<select id="gfIn" style="${inStyle}" onchange="_ganttFilter.status=this.value;renderGantt();"><option value="">— Tất cả —</option>${['Chưa làm','Đang làm','Hoàn thành'].map(s=>`<option ${_ganttFilter.status===s?'selected':''}>${s}</option>`).join('')}</select>`;
   pop.innerHTML = inner + `<div style="text-align:right;margin-top:7px;"><span onclick="_ganttFilter['${key}']='';renderGantt();_closeGanttPop();" style="font-size:11px;color:#991b1b;cursor:pointer;">✕ Xoá lọc cột này</span></div>`;
@@ -2147,7 +2156,7 @@ function renderGantt() {
       <div style="width:${COLS[2].w}px;flex-shrink:0;padding:0 6px;border-right:1px solid #e5e7eb;display:flex;align-items:center;font-size:11px;color:#374151;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="${esc(t.person||'')}">${esc(t.person||'')}</div>
       <div style="width:${COLS[3].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:${isOverdue?'700':'400'};color:${isOverdue?'#dc2626':'#374151'};">${t.deadline?fmtVN(t.deadline):'–'}</div>
       <div style="width:${COLS[4].w}px;flex-shrink:0;padding:0 4px;border-right:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;">
-        <span style="font-size:10px;font-weight:700;color:${sColor};background:${sBg};padding:1px 5px;border-radius:8px;">${sIcon[t.status]||''} ${t.status==='Đang làm'?'Làm':t.status==='Hoàn thành'?'Xong':'Chờ'}</span>
+        <span style="font-size:10px;font-weight:700;color:${sColor};background:${sBg};padding:1px 5px;border-radius:8px;">${t.status==='Đang làm'?'Làm':t.status==='Hoàn thành'?'Xong':'Chờ'}</span>
       </div>
       <div style="width:${COLS[5].w}px;flex-shrink:0;padding:0 4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${prog===100?'#059669':'#1a56db'};">${prog}%</div>
     `;
@@ -2333,7 +2342,7 @@ function renderGantt() {
 
   el.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">🗓 Tiến độ công việc – ${PROJECT_NAME}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">Tiến độ công việc – ${PROJECT_NAME}</h2>
     </div>
     ${ganttDu?`<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:12px;color:#92400e;">Đang hiển thị <b>${GANTT_MAX}</b> việc gần hạn nhất để biểu đồ chạy mượt. Dùng bộ lọc phía trên để xem nhóm việc khác.</div>`:''}
     ${legend}
@@ -2420,10 +2429,10 @@ function _perfGrade(s) {
   const rawScore = (pts / (s.total * 3)) * 100;
   const score    = Math.max(0, Math.min(100, Math.round(rawScore - issuePenalty)));
 
-  if (score >= 85) return { label:'⭐ Xuất sắc',        color:'#065f46', bg:'#d1fae5', score };
-  if (score >= 70) return { label:'🟢 Tốt',             color:'#1e40af', bg:'#dbeafe', score };
-  if (score >= 55) return { label:'🟡 Trung bình',      color:'#92400e', bg:'#fef3c7', score };
-  return           { label:'🔴 Cần cải thiện',          color:'#991b1b', bg:'#fee2e2', score };
+  if (score >= 85) return { label:'Xuất sắc',        color:'#065f46', bg:'#d1fae5', score };
+  if (score >= 70) return { label:'Tốt',             color:'#1e40af', bg:'#dbeafe', score };
+  if (score >= 55) return { label:'Trung bình',      color:'#92400e', bg:'#fef3c7', score };
+  return           { label:'Cần cải thiện',          color:'#991b1b', bg:'#fee2e2', score };
 }
 
 function _teamColor(name) {
@@ -2460,7 +2469,6 @@ function renderDashboard() {
         ['📊','Tỷ lệ hoàn thành',gRate+'%','#374151','#f3f4f6'],
       ].map(([ic,lb,val,tc,bg])=>`
         <div style="background:${bg};border-radius:10px;padding:12px 14px;text-align:center;">
-          <div style="font-size:18px;margin-bottom:3px;">${ic}</div>
           <div style="font-size:11px;font-weight:600;color:${tc};margin-bottom:4px;">${lb}</div>
           <div style="font-size:26px;font-weight:800;color:${tc};">${val}</div>
         </div>`).join('')}
@@ -2473,7 +2481,7 @@ function renderDashboard() {
     const overdue = s.dangLamQuaHan + s.chuaLamQuaHan; // quá hạn chưa xong
     const cell = (icon, label, val, bg, color) => `
       <div style="background:${bg};border-radius:8px;padding:8px 10px;text-align:center;">
-        <div style="font-size:10px;font-weight:600;color:${color};margin-bottom:3px;white-space:nowrap;">${icon} ${label}</div>
+        <div style="font-size:10px;font-weight:600;color:${color};margin-bottom:3px;white-space:nowrap;">${label}</div>
         <div style="font-size:22px;font-weight:800;color:${color};line-height:1.1;">${val}</div>
       </div>`;
     return `
@@ -2496,7 +2504,7 @@ function renderDashboard() {
           ${cell('◑','Đang làm',   s.dangLam,   '#eff6ff','#1e40af')}
           ${cell('○','Chưa làm',   s.chuaLam,   '#fafaf9','#78716c')}
         </div>
-        ${s.stTotal?`<div style="margin-top:8px;padding:5px 10px;background:#f5f3ff;border-radius:6px;font-size:11px;color:#5b21b6;">📌 Tasks con: ${s.stDone}/${s.stTotal} hoàn thành</div>`:''}
+        ${s.stTotal?`<div style="margin-top:8px;padding:5px 10px;background:#f5f3ff;border-radius:6px;font-size:11px;color:#5b21b6;">Tasks con: ${s.stDone}/${s.stTotal} hoàn thành</div>`:''}
         ${s.issues?`<div style="margin-top:6px;padding:5px 10px;background:#fffbeb;border-radius:6px;font-size:11px;color:#c27803;">⚠ Vướng mắc: ${s.issues} việc</div>`:''}
         ${s.dlPending?`<div style="margin-top:6px;padding:5px 10px;background:#fef3c7;border-radius:6px;font-size:11px;color:#92400e;">⏳ Chờ duyệt dời deadline: ${s.dlPending}</div>`:''}
       </div>
@@ -2505,18 +2513,10 @@ function renderDashboard() {
 
   document.getElementById('dashView').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">📈 Dashboard hiệu suất – ${PROJECT_NAME}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">Dashboard hiệu suất – ${PROJECT_NAME}</h2>
       <div style="font-size:12px;color:var(--gray-500);">Cập nhật: ${new Date().toLocaleString('vi-VN')}</div>
     </div>
     ${summaryHtml}
-    <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:10px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-      <span>✅ <span style="color:#059669">Trước hạn</span></span>
-      <span>🎯 <span style="color:#1d4ed8">Đúng hạn</span></span>
-      <span>⚠️ <span style="color:#c2410c">Trễ hạn (đã xong)</span></span>
-      <span>🔴 <span style="color:#dc2626">Quá hạn (chưa xong)</span></span>
-      <span>◑ <span style="color:#1e40af">Đang làm</span></span>
-      <span>○ <span style="color:#78716c">Chưa làm</span></span>
-    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;">
       ${memberCards.length ? memberCards.join('') : '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-500);">Chưa có dữ liệu</div>'}
     </div>`;
@@ -2630,9 +2630,9 @@ function _renderInfoModal(t, tab) {
   const stCount = (t.subtasks||[]).length;
   const dlrPend = (t.dlRequests||[]).some(r=>r.status==='pending');
   const tabs = [
-    {id:'detail',   label:'📋 Chi tiết'},
-    {id:'subtasks', label:`📌 Tasks con${stCount?' ('+stCount+')':''}`},
-    {id:'dlreq',    label:`📅 Dời deadline${dlrPend?' ⚠':''}`},
+    {id:'detail',   label:'Chi tiết'},
+    {id:'subtasks', label:`Tasks con${stCount?' ('+stCount+')':''}`},
+    {id:'dlreq',    label:`Dời deadline${dlrPend?' ⚠':''}`},
   ];
   const tabHtml = tabs.map(tb=>
     `<button class="info-tab${tab===tb.id?' active':''}" onclick="_switchInfoTab('${tb.id}')">${tb.label}</button>`
@@ -2669,13 +2669,13 @@ function _infoDetail(t) {
       ${row('Nội dung',esc(t.category||''))}
       ${row('Ưu tiên',`<span style="background:${uColor}20;color:${uColor};padding:2px 10px;border-radius:12px;font-weight:700;">${esc(t.priority||'')}</span>`,true)}
       ${row('Deadline',t.deadline?`<span style="color:#dc2626;font-weight:600;">${fmtVN(t.deadline)}</span>`:'')}
-      ${row('Trạng thái',`${sIcon[t.status]||''} ${esc(t.status||'')} · <strong>${parseInt(t.progress)||0}%</strong>`,true)}
+      ${row('Trạng thái',`${esc(t.status||'')} · <strong>${parseInt(t.progress)||0}%</strong>`,true)}
       ${row('Ngày hoàn thành',t.doneDate?fmtVN((t.doneDate||'').slice(0,10)):'')}
       ${row('Đánh giá',`<span style="background:${pf.bg};color:${pf.color};padding:2px 9px;border-radius:12px;font-weight:700;">${pf.label}</span>`,true)}
       ${row('Ghi chú',esc(t.note||''))}
       ${row('Vướng mắc',t.issue?`<span style="color:#c27803;">⚠ ${esc(t.issue)}</span>`:'',true)}
       ${row('Kết quả',esc(t.result||''))}
-      ${row('Tài liệu',t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu</a>`:'',true)}
+      ${row('Tài liệu',t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">Xem tài liệu</a>`:'',true)}
       ${row('Người nhận thông tin',ccChips)}
     </table>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
@@ -2748,7 +2748,7 @@ function _infoDlReq(t) {
     </div>`).join(''):'<div style="text-align:center;padding:16px;color:var(--gray-500);">Chưa có yêu cầu dời deadline.</div>';
   return `${reqHtml}
     <div style="border-top:1px dashed var(--gray-200);margin-top:12px;padding-top:12px;">
-      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">📅 Tạo yêu cầu dời deadline mới</div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Tạo yêu cầu dời deadline mới</div>
       <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;">Deadline hiện tại: <strong>${fmtVN(t.deadline)||'Chưa có'}</strong></div>
       <div class="field-row" style="margin-bottom:8px;">
         <div class="field-group"><label class="field-label">Deadline mới đề xuất</label>
@@ -2756,7 +2756,7 @@ function _infoDlReq(t) {
         <div class="field-group"><label class="field-label">Lý do</label>
           <input type="text" id="dlReason" placeholder="Lý do cần dời..." style="font-size:13px;"></div>
       </div>
-      <button class="btn btn-primary" style="width:100%;" onclick="submitDlRequest('${t.id}')">📨 Gửi yêu cầu (email PC + PM)</button>
+      <button class="btn btn-primary" style="width:100%;" onclick="submitDlRequest('${t.id}')">Gửi yêu cầu (email PC + PM)</button>
     </div>`;
 }
 
@@ -2889,7 +2889,7 @@ function openSubtaskModal(taskId, stId) {
   _renderStCcPanel(s.ccMembers||[]);
   document.getElementById('stmDoneGroup').style.display = s.status==='Hoàn thành'?'':'none';
   document.querySelector('#stModalOverlay .modal-title').textContent = '✏ Sửa task con';
-  document.getElementById('stmSaveBtn').textContent = '💾 Lưu task con';
+  document.getElementById('stmSaveBtn').textContent = 'Lưu task con';
   document.getElementById('stModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('stm_name').focus(),80);
 }
@@ -3234,7 +3234,7 @@ function renderNoticeTree() {
     el.innerHTML = `<div style="text-align:center;padding:60px 24px;color:var(--gray-500);">
       <div style="font-size:48px;margin-bottom:12px;">🔔</div>
       <div style="font-size:16px;font-weight:600;color:#374151;">Chưa có thông báo nào</div>
-      <div style="font-size:13px;margin-top:6px;">Nhấn nút <strong>📢 Thông báo</strong> để gửi thông báo đầu tiên</div>
+      <div style="font-size:13px;margin-top:6px;">Nhấn nút <strong>Thông báo công việc</strong> để gửi thông báo đầu tiên</div>
     </div>`;
     return;
   }
@@ -3244,7 +3244,7 @@ function renderNoticeTree() {
 <div style="max-width:960px;margin:0 auto;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
     <div>
-      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">🔔 Lịch sử thông báo – ${esc(PROJECT_NAME)}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#111827;">Lịch sử thông báo – ${esc(PROJECT_NAME)}</h2>
       <p style="margin:4px 0 0;font-size:13px;color:var(--gray-500);">${totalCount} thông báo · ${people.length} người nhận</p>
     </div>
     <!-- (Đã gỡ nút "Thêm thông báo" và "Xoá lịch sử" theo yêu cầu) -->
@@ -3296,7 +3296,7 @@ function renderNoticeTree() {
           <span style="font-weight:700;font-size:13px;color:#111827;">${esc(n.title||'')}</span>
         </div>
         <div style="font-size:12px;color:#374151;line-height:1.5;white-space:pre-wrap;">${esc(n.content||'').substring(0,200)}${(n.content||'').length>200?'…':''}</div>
-        ${n.doc?`<div style="margin-top:6px;"><a href="${esc(n.doc)}" target="_blank" style="font-size:11px;color:#1a56db;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#eff6ff;padding:3px 8px;border-radius:6px;border:1px solid #bfdbfe;">📎 Tài liệu đính kèm</a></div>`:''}
+        ${n.doc?`<div style="margin-top:6px;"><a href="${esc(n.doc)}" target="_blank" style="font-size:11px;color:#1a56db;text-decoration:none;display:inline-flex;align-items:center;gap:4px;background:#eff6ff;padding:3px 8px;border-radius:6px;border:1px solid #bfdbfe;">Tài liệu đính kèm</a></div>`:''}
         ${(n.recipients||[]).length>1||((n.cc||[]).length>0)?`
         <div style="margin-top:6px;font-size:10px;color:var(--gray-500);">
           Gửi đến: ${(n.recipients||[]).map(r=>`<span style="background:#f3f4f6;padding:1px 5px;border-radius:4px;margin-right:2px;">${esc(r)}</span>`).join('')}
@@ -3304,8 +3304,8 @@ function renderNoticeTree() {
         </div>`:''}
       </div>
       <div style="font-size:10px;color:var(--gray-500);white-space:nowrap;text-align:right;flex-shrink:0;">
-        <div>🕐 ${esc(n.sentAt||'')}</div>
-        <div style="margin-top:2px;">👤 ${esc(n.sender||'')}</div>
+        <div>${esc(n.sentAt||'')}</div>
+        <div style="margin-top:2px;">${esc(n.sender||'')}</div>
       </div>
     </div>
   </div>
@@ -3330,12 +3330,12 @@ function perfOf(t) {
     const done = (t.doneDate || '').slice(0,10);
     if (!done) return { key:'doneNoDate', days:0, label:'Hoàn thành (chưa ghi nhận ngày xong)', color:'#374151', bg:'#f3f4f6' };
     const diff = Math.round((new Date(done) - new Date(t.deadline)) / 86400000);
-    if (diff < 0)   return { key:'early',  days:-diff, label:`✓ Hoàn thành TRƯỚC HẠN ${-diff} ngày`, color:'#065f46', bg:'#d1fae5' };
-    if (diff === 0) return { key:'ontime', days:0,     label:'✓ Hoàn thành ĐÚNG HẠN',               color:'#1e40af', bg:'#dbeafe' };
-    return { key:'late', days:diff, label:`⚠ Hoàn thành TRỄ HẠN ${diff} ngày`, color:'#991b1b', bg:'#fee2e2' };
+    if (diff < 0)   return { key:'early',  days:-diff, label:`Hoàn thành TRƯỚC HẠN ${-diff} ngày`, color:'#065f46', bg:'#d1fae5' };
+    if (diff === 0) return { key:'ontime', days:0,     label:'Hoàn thành ĐÚNG HẠN',               color:'#1e40af', bg:'#dbeafe' };
+    return { key:'late', days:diff, label:`Hoàn thành TRỄ HẠN ${diff} ngày`, color:'#991b1b', bg:'#fee2e2' };
   }
   const diff = Math.round((new Date(td) - new Date(t.deadline)) / 86400000);
-  if (diff > 0)   return { key:'overdue', days:diff, label:`⚠ ĐANG QUÁ HẠN ${diff} ngày (chưa hoàn thành)`, color:'#991b1b', bg:'#fee2e2' };
+  if (diff > 0)   return { key:'overdue', days:diff, label:`ĐANG QUÁ HẠN ${diff} ngày (chưa hoàn thành)`, color:'#991b1b', bg:'#fee2e2' };
   if (diff === 0) return { key:'today', days:0, label:'Deadline HÔM NAY', color:'#92400e', bg:'#fef3c7' };
   return { key:'pending', days:-diff, label:`Còn ${-diff} ngày đến deadline`, color:'#374151', bg:'#f3f4f6' };
 }
@@ -3385,14 +3385,14 @@ function _renderInfoDetail(id, tab) {
       ${row('Nội dung',esc(t.category||''))}
       ${row('Ưu tiên',`<span style="background:${uColor}20;color:${uColor};padding:2px 8px;border-radius:10px;font-weight:700;">${esc(t.priority||'')}</span>`,true)}
       ${row('Deadline',t.deadline?`<span style="color:#dc2626;font-weight:600;">${fmtVN(t.deadline)}</span>`:'')}
-      ${row('Trạng thái',`${sIconM[t.status]||''} ${esc(t.status||'')} · <strong>${parseInt(t.progress)||0}%</strong>`,true)}
+      ${row('Trạng thái',`${esc(t.status||'')} · <strong>${parseInt(t.progress)||0}%</strong>`,true)}
       ${row('Ngày hoàn thành',t.doneDate?fmtVN((t.doneDate||'').slice(0,10)):'')}
       ${row('Đánh giá',`<span style="background:${pf.bg};color:${pf.color};padding:2px 8px;border-radius:10px;font-weight:700;">${pf.label}</span>`,true)}
       ${row('Ghi chú',t.note?`<span style="white-space:pre-wrap;">${esc(t.note)}</span>`:'')}
       ${row('Vướng mắc',t.issue?`<span style="color:#c27803;">⚠ ${esc(t.issue)}</span>`:'',true)}
       ${row('Kết quả',t.result?`<span style="white-space:pre-wrap;">${esc(t.result)}</span>`:'')}
       ${row('Tệp đính kèm', (t.resultImages&&t.resultImages.length)?t.resultImages.map(im=> (im.isImage!==false) ? `<a href="${esc(im.url)}" target="_blank" title="Xem ảnh"><img src="${im.id?('https://drive.google.com/thumbnail?id='+esc(im.id)+'&sz=w400'):esc(im.url)}" style="width:74px;height:74px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;margin:2px;"></a>` : `<a href="${esc(im.url)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;color:#1a56db;margin:2px 10px 2px 0;text-decoration:none;font-size:12px;">📄 ${esc(im.name||'Tệp')}</a>`).join(''):'')}
-      ${row('Tài liệu',t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">📎 Xem tài liệu</a>`:'',true)}
+      ${row('Tài liệu',t.doc?`<a href="${esc(t.doc)}" target="_blank" style="color:#1a56db;">Xem tài liệu</a>`:'',true)}
     </table>
     <div style="text-align:right;">
       <button class="btn btn-primary" onclick="closeInfo()" style="font-size:12px;padding:6px 16px;">Đóng</button>
@@ -3421,7 +3421,7 @@ function _renderInfoDetail(id, tab) {
           ${!isLast?`<div style="width:2px;flex:1;min-height:12px;background:#e5e7eb;margin-top:3px;"></div>`:''}
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:3px;font-weight:500;">🕐 ${esc(h.ts||'')}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:3px;font-weight:500;">${esc(h.ts||'')}</div>
           <div style="font-size:12px;color:#111827;line-height:1.5;">${narrative}</div>
         </div>
       </div>`;
@@ -3437,7 +3437,7 @@ function _renderInfoDetail(id, tab) {
       style="padding:8px 14px;font-size:12px;font-weight:${activeTab===id?'700':'500'};
              border:none;border-bottom:${activeTab===id?'2px solid #1a56db':'2px solid transparent'};
              background:none;color:${activeTab===id?'#1a56db':'#6b7280'};cursor:pointer;white-space:nowrap;">
-      ${icon} ${label}${id==='history'?' ('+hist.length+')':''}
+      ${label}${id==='history'?' ('+hist.length+')':''}
     </button>`;
 
   document.getElementById('infoBody').innerHTML = `
