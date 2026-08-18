@@ -1996,9 +1996,9 @@ function calcStats() {
     else if (it.status==='Hoàn thành') done++;
     if (it.deadline && it.deadline < td && it.status!=='Hoàn thành') overdue++;
   };
-  // CHỈ đếm công việc chính – KHÔNG cộng task con, để số ở ô thống kê
-  // luôn khớp với số dòng ở thanh phân trang và với email báo cáo tổng hợp.
-  tasks.forEach(t => tally(t));
+  // Đếm CẢ task con – khớp với email báo cáo tổng hợp (cũng gộp task con).
+  // Số này lớn hơn số DÒNG trong bảng vì task con lồng trong việc mẹ, không phải dòng riêng.
+  tasks.forEach(t => { tally(t); (t.subtasks||[]).forEach(s => tally(s)); });
   return { total, todo, doing, done, overdue };
 }
 
